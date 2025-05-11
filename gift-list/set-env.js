@@ -2,6 +2,13 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
+// Log current NODE_ENV
+console.log('Current NODE_ENV:', process.env.NODE_ENV);
+
+// Set the environment to production mode for builds
+process.env.NODE_ENV = 'production';
+console.log('Setting NODE_ENV to:', process.env.NODE_ENV);
+
 // Valeurs par défaut si les variables d'environnement ne sont pas définies
 const defaultEnvValues = {
   GEMINI_API_KEY: 'AIzaSyByahoGsqsWe6qkq_VVam8DGyRlS5xuOmA',
@@ -34,6 +41,7 @@ environmentFiles.forEach(file => {
     
     fs.writeFileSync(file.path, content);
     console.log(`Variables d'environnement injectées dans ${file.path}`);
+    console.log(`Production mode: ${file.production}`);
   }
 });
 

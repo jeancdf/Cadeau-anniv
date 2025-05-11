@@ -96,6 +96,41 @@ export class GiftAiService {
   }
 
   /**
+   * Recherche des liens spécifiques pour un produit donné
+   * @param productName Le nom du produit à rechercher
+   * @param pricePoint Les informations de prix pour guider la recherche
+   * @returns Observable avec des liens de produits spécifiques
+   */
+  findProductLinks(productName: string, pricePoint: any): Observable<any> {
+    const productPrompt = `
+    Trouve UN lien spécifique qui fonctionne ACTUELLEMENT pour ce produit: "${productName}" avec l'option "${pricePoint.label}" au prix d'environ ${pricePoint.price}€.
+    
+    IMPORTANT:
+    1. Vérifie que chaque lien est actuellement fonctionnel et mène directement au produit
+    2. Assure-toi que le produit est disponible à l'achat actuellement
+    3. Priorise les sites de confiance comme Amazon.fr, Fnac.com, Cdiscount.com, Darty.com, Boulanger.com, etc.
+    4. Évite les liens cassés ou qui mènent à des pages génériques
+    
+    Cherche d'abord un site fiable qui propose ce produit de façon vérifiable puis VÉRIFIE que le lien fonctionne.
+    Ne fais PAS de supposition sur les liens, assure-toi qu'ils fonctionnent avant de les inclure.
+    
+    Retourne UNE SEULE option fiable sous forme de JSON:
+    {
+      "links": [
+        {
+          "title": "Titre exact du produit sur le site",
+          "price": "Prix affiché (ex: 49,99€)",
+          "url": "URL directe du produit qui fonctionne",
+          "site": "Nom du site (ex: Amazon.fr)"
+        }
+      ]
+    }
+    `;
+    
+    return from(this.generateContent(productPrompt));
+  }
+
+  /**
    * Méthode privée pour appeler l'API Gemini
    */
   private async generateContent(prompt: string): Promise<any> {

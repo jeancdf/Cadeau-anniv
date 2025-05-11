@@ -9,9 +9,10 @@
 }
 
 .cdk-drag-preview {
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 30px var(--shadow-color);
   border-radius: 12px;
-  background-color: #fff;
+  background-color: var(--card-bg);
+  color: var(--card-color);
 }
 
 .cdk-drag-placeholder {
@@ -27,14 +28,18 @@
 }
 
 .gift-card {
+  margin-top: 10px;
+  margin-left: 10px;
+  overflow: visible !important;
   transition: all 0.3s ease;
   position: relative;
-  overflow: hidden;
+  background-color: var(--card-bg);
+  color: var(--card-color);
 }
 
 .gift-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 15px 30px var(--shadow-color);
 }
 
 .gift-card::before {
@@ -51,6 +56,12 @@
 
 .gift-card:hover::before {
   opacity: 1;
+}
+
+/* Find Link Button */
+.btn-outline-info:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 5px rgba(23, 162, 184, 0.2);
 }
 
 .suggestion-cards {
@@ -109,11 +120,17 @@
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  background-color: var(--card-bg);
+  color: var(--card-color);
+  border-color: var(--border-color);
 }
 
 .card-header {
   position: relative;
   overflow: hidden;
+  background-color: var(--card-bg);
+  color: var(--card-color);
+  border-color: var(--border-color);
 }
 
 .card-header::after {
@@ -146,4 +163,84 @@
 
 .modal {
   z-index: 1050;
+}
+
+.modal-content {
+  background-color: var(--modal-bg);
+  color: var(--modal-color);
+  border-color: var(--border-color);
+}
+
+/* Ranking badge styling */
+.ranking-badge {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  background: linear-gradient(135deg, #ff7b00, #ff9500);
+  color: white;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 10;
+  font-size: 14px;
+  border: 2px solid white;
+}
+
+/* Dark theme specific adjustments */
+:host-context(.dark-theme) .card-footer {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+}
+
+:host-context(.dark-theme) .alert-info {
+  background-color: rgba(6, 182, 212, 0.15);
+  color: var(--card-color);
+}
+
+:host-context(.dark-theme) .btn-light {
+  background-color: var(--gray-200);
+  color: var(--card-color);
+  border-color: var(--gray-300);
+}
+
+/* Table styling for dark mode */
+:host-context(.dark-theme) .table {
+  color: var(--card-color);
+  border-color: var(--border-color);
+}
+
+:host-context(.dark-theme) .table th,
+:host-context(.dark-theme) .table td {
+  border-color: var(--border-color);
+}
+
+:host-context(.dark-theme) .table-hover tbody tr:hover {
+  background-color: var(--gray-100);
+}
+
+:host-context(.dark-theme) .table thead th {
+  background-color: var(--gray-100);
+  color: var(--card-color);
+  border-color: var(--border-color);
+}
+
+/* Badge styling for dark mode */
+:host-context(.dark-theme) .badge.bg-light.text-dark {
+  background-color: var(--gray-200) !important;
+  color: var(--card-color) !important;
+}
+
+/* Handle price option elements in AI suggestions */
+:host-context(.dark-theme) .price-option .badge.bg-light.text-dark {
+  background-color: var(--gray-200) !important;
+  color: var(--card-color) !important;
+}
+
+:host-context(.dark-theme) .price-options .price-option {
+  border-color: var(--border-color);
 }

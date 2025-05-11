@@ -1,32 +1,53 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 
+// Load environment variables from config.env file
 dotenv.config({ path: './config.env' });
 
-// Récupérer les informations de connexion depuis les variables d'environnement
-// Format: postgres://username:password@host:port/database
-const DATABASE_URL = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/gift-list';
-const isProduction = process.env.NODE_ENV === 'production';
+console.log('Database URL:', process.env.DATABASE_URL);
 
-// Configuration de Sequelize
+// Get database connection string from environment variables
+const DATABASE_URL = process.env.DATABASE_URL;
+
+// Default to local database if environment variable is not set (should not happen)
+if (!DATABASE_URL) {
+  console.error('ERROR: DATABASE_URL environment variable is not set in config.env');
+  process.exit(1);
+}
+
+// Check if we're connecting to Render
+const isRenderDB = DATABASE_URL.includes('render.com');
+
+// Sequelize configuration
 const sequelizeConfig = {
   dialect: 'postgres',
-  logging: isProduction ? false : console.log,
+  logging: console.log, // Enable logging for debugging
 };
 
-// Ajouter les options SSL uniquement en production
-if (isProduction) {
+// Add SSL options for Render
+if (isRenderDB) {
+  console.log('Configuring SSL for Render database connection');
   sequelizeConfig.dialectOptions = {
     ssl: {
       require: true,
-      rejectUnauthorized: false // Nécessaire pour Render
+      rejectUnauthorized: false
     }
   };
 }
 
-const sequelize = new Sequelize(DATABASE_URL, sequelizeConfig);
+// Create Sequelize instance
+let sequelize;
+try {
+  sequelize = new Sequelize(DATABASE_URL, sequelizeConfig);
+  console.log('Sequelize instance created');
+} catch (error) {
+  console.error('Error creating Sequelize instance:', error);
+  process.exit(1);
+}
 
-// Tester la connexion
+// Test database connection
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
