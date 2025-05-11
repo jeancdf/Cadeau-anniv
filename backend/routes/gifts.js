@@ -1,5 +1,5 @@
 import express from 'express';
-import { Gift } from '../models/Gift.js';
+import { Gift } from '../models/gift.js';
 import { Op } from 'sequelize';
 
 const router = express.Router();

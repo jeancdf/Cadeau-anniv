@@ -5,19 +5,26 @@ dotenv.config({ path: './config.env' });
 
 // Récupérer les informations de connexion depuis les variables d'environnement
 // Format: postgres://username:password@host:port/database
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/gift-list';
+const isProduction = process.env.NODE_ENV === 'production';
 
 // Configuration de Sequelize
-const sequelize = new Sequelize(DATABASE_URL, {
+const sequelizeConfig = {
   dialect: 'postgres',
-  logging: process.env.NODE_ENV === 'production' ? false : console.log,
-  dialectOptions: {
+  logging: isProduction ? false : console.log,
+};
+
+// Ajouter les options SSL uniquement en production
+if (isProduction) {
+  sequelizeConfig.dialectOptions = {
     ssl: {
-      require: process.env.NODE_ENV === 'production',
+      require: true,
       rejectUnauthorized: false // Nécessaire pour Render
     }
-  }
-});
+  };
+}
+
+const sequelize = new Sequelize(DATABASE_URL, sequelizeConfig);
 
 // Tester la connexion
 const testConnection = async () => {
@@ -29,4 +36,4 @@ const testConnection = async () => {
   }
 };
 
-export { sequelize, testConnection }; 
+export { sequelize, testConnection };

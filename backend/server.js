@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import giftRoutes from './routes/gifts.js';
 import { sequelize, testConnection } from './config/database.js';
-import { syncGiftModel } from './models/Gift.js';
+import { syncGiftModel } from './models/gift.js';
 
 // Charger les variables d'environnement
 dotenv.config({ path: './config.env' });

@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Installer les dépendances en mode production
-RUN npm ci --only=production
+RUN npm install --production
 
 # Copier le reste du code source après l'installation des dépendances
 COPY . .
