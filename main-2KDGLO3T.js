@@ -17,38 +17,42 @@ ${t.map((r,i)=>`${i+1}) ${r.toString()}`).join(`
       J'ai identifi\xE9 ces centres d'int\xE9r\xEAt possibles: ${o.join(", ")}
       Et ces cat\xE9gories possibles: ${i.join(", ")}
       
-      IMPORTANT: Sois BREF et CONCIS dans toutes tes r\xE9ponses. Les utilisateurs ne veulent pas lire de longs textes.
+      IMPORTANT: 
+      - Sois BREF et CONCIS dans toutes tes r\xE9ponses
+      - Identifie 1-2 centres d'int\xE9r\xEAt PRINCIPAUX et concentre-toi sur eux
+      - Ne force PAS des connexions entre des int\xE9r\xEAts non li\xE9s (ex: ne pas m\xE9langer golf et art)
+      - Sugg\xE8re des cadeaux qui correspondent DIRECTEMENT \xE0 un int\xE9r\xEAt sp\xE9cifique
       
-      Sugg\xE8re 3 id\xE9es de cadeaux qui:
-      1. Sont PARTIELLEMENT inspir\xE9es des centres d'int\xE9r\xEAt d\xE9j\xE0 pr\xE9sents (${o.join(", ")})
-      2. MAIS PAS trop similaires aux cadeaux d\xE9j\xE0 pr\xE9sents dans la liste
-      3. Offrent de nouvelles id\xE9es qui pourraient plaire \xE0 quelqu'un ayant ces int\xE9r\xEAts
+      Sugg\xE8re 3 id\xE9es de cadeaux en suivant ces r\xE8gles:
+      1. Chaque cadeau doit \xEAtre clairement li\xE9 \xE0 UN int\xE9r\xEAt sp\xE9cifique (pas de combinaisons forc\xE9es)
+      2. Les suggestions doivent \xEAtre concr\xE8tes et utiles
+      3. \xC9vite les cadeaux trop similaires \xE0 ceux d\xE9j\xE0 dans la liste
+      4. Privil\xE9gie les cadeaux directement li\xE9s au centre d'int\xE9r\xEAt
       
-      Pour l'analyse et le raisonnement:
-      - Limite chaque explication \xE0 1-2 phrases courtes
-      - \xC9vite les d\xE9tails non essentiels
-      - Sois direct et pr\xE9cis
+      Pour l'analyse:
+      - Identifie les 1-2 centres d'int\xE9r\xEAt PRINCIPAUX ressortant de la demande et des cadeaux existants
+      - Explique bri\xE8vement pourquoi tu te concentres sur ces int\xE9r\xEAts sp\xE9cifiques
       
       Pour chaque cadeau, fournis:
-      1. Un nom descriptif
-      2. Une br\xE8ve description (max 100 caract\xE8res)
-      3. Un court raisonnement (max 150 caract\xE8res)
+      1. Un nom descriptif court et pr\xE9cis
+      2. Une br\xE8ve description (max 80 caract\xE8res)
+      3. Un court raisonnement (max 100 caract\xE8res)
       4. Trois options de prix (bas, moyen, \xE9lev\xE9) avec:
-         - Label: le nom de l'option (court)
+         - Label court et descriptif
          - Prix (en euros, sans symbole \u20AC)
          - Un lien e-commerce fictif
       
       Retourne le r\xE9sultat sous forme de JSON structur\xE9 comme ceci:
       {
-        "analysisIntro": "Une br\xE8ve analyse g\xE9n\xE9rale (max 150 caract\xE8res)",
-        "analysisMethod": "Description courte de la m\xE9thode (max 100 caract\xE8res)",
-        "identifiedInterests": ["int\xE9r\xEAt1", "int\xE9r\xEAt2", "etc"],
+        "analysisIntro": "Identification claire des 1-2 int\xE9r\xEAts principaux (max 100 caract\xE8res)",
+        "analysisMethod": "Explication courte du focus (max 80 caract\xE8res)",
+        "identifiedInterests": ["int\xE9r\xEAt1", "int\xE9r\xEAt2"],
         "suggestions": [
           {
             "name": "Nom du cadeau",
-            "description": "Description br\xE8ve (max 100 caract\xE8res)",
-            "reasoning": "Explication courte (max 150 caract\xE8res)",
-            "relatedInterests": ["int\xE9r\xEAt1", "int\xE9r\xEAt2"],
+            "description": "Description br\xE8ve (max 80 caract\xE8res)",
+            "reasoning": "Explication du lien direct avec l'int\xE9r\xEAt principal (max 100 caract\xE8res)",
+            "relatedInterests": ["Un seul int\xE9r\xEAt principal"],
             "pricePoints": [
               {"label": "Option Budget", "price": 15, "link": "https://example.com/budget"},
               {"label": "Option Standard", "price": 30, "link": "https://example.com/standard"},
@@ -61,31 +65,34 @@ ${t.map((r,i)=>`${i+1}) ${r.toString()}`).join(`
       `;return X(this.generateContent(a))}else{let s=`
       Sugg\xE8re 3 id\xE9es de cadeaux bas\xE9es sur cette description: "${t}".
       
-      IMPORTANT: Sois BREF et CONCIS dans toutes tes r\xE9ponses. Les utilisateurs ne veulent pas lire de longs textes.
+      IMPORTANT: 
+      - Sois BREF et CONCIS dans toutes tes r\xE9ponses
+      - Identifie 1-2 centres d'int\xE9r\xEAt PRINCIPAUX dans la demande et concentre-toi sur eux
+      - Sugg\xE8re des cadeaux qui correspondent DIRECTEMENT \xE0 un int\xE9r\xEAt sp\xE9cifique
+      - Ne force PAS des connexions entre des int\xE9r\xEAts non li\xE9s
       
-      Pour l'analyse et le raisonnement:
-      - Limite chaque explication \xE0 1-2 phrases courtes
-      - \xC9vite les d\xE9tails non essentiels
-      - Sois direct et pr\xE9cis
+      Pour l'analyse:
+      - Identifie les 1-2 int\xE9r\xEAts PRINCIPAUX ressortant de la demande
+      - Concentre chaque suggestion sur UN int\xE9r\xEAt sp\xE9cifique
       
       Pour chaque cadeau, fournis:
-      1. Un nom descriptif
-      2. Une br\xE8ve description (max 100 caract\xE8res)
-      3. Un court raisonnement (max 150 caract\xE8res)
+      1. Un nom descriptif court et pr\xE9cis
+      2. Une br\xE8ve description (max 80 caract\xE8res)
+      3. Un court raisonnement (max 100 caract\xE8res)
       4. Trois options de prix (bas, moyen, \xE9lev\xE9) avec:
-         - Label: le nom de l'option (court)
+         - Label court et descriptif
          - Prix (en euros, sans symbole \u20AC)
          - Un lien e-commerce fictif
       
       Retourne le r\xE9sultat sous forme de JSON structur\xE9 comme ceci:
       {
-        "analysisIntro": "Une br\xE8ve analyse g\xE9n\xE9rale (max 150 caract\xE8res)",
-        "analysisMethod": "Description courte de la m\xE9thode (max 100 caract\xE8res)",
+        "analysisIntro": "Identification claire des 1-2 int\xE9r\xEAts principaux (max 100 caract\xE8res)",
+        "analysisMethod": "Explication courte du focus (max 80 caract\xE8res)",
         "suggestions": [
           {
             "name": "Nom du cadeau",
-            "description": "Description br\xE8ve (max 100 caract\xE8res)",
-            "reasoning": "Explication courte (max 150 caract\xE8res)",
+            "description": "Description br\xE8ve (max 80 caract\xE8res)",
+            "reasoning": "Explication du lien direct avec l'int\xE9r\xEAt principal (max 100 caract\xE8res)",
             "pricePoints": [
               {"label": "Option Budget", "price": 15, "link": "https://example.com/budget"},
               {"label": "Option Standard", "price": 30, "link": "https://example.com/standard"},
@@ -206,25 +213,31 @@ ${t.map((r,i)=>`${i+1}) ${r.toString()}`).join(`
     
     Assure-toi que les suggestions sont diff\xE9rentes des cadeaux d\xE9j\xE0 pr\xE9sents.`:""}
     
+    IMPORTANT:
+    - Sois TR\xC8S CONCIS et direct
+    - Concentre-toi UNIQUEMENT sur la cat\xE9gorie "${r}"
+    - Propose des cadeaux sp\xE9cifiques, utiles et concrets
+    - Pas de descriptions vagues ou g\xE9n\xE9riques
+    
     Pour chaque cadeau, fournis:
-    1. Un nom descriptif
-    2. Une description qui explique pourquoi ce cadeau est int\xE9ressant dans la cat\xE9gorie "${r}"
-    3. Trois options de prix (bas, moyen, \xE9lev\xE9) avec les informations suivantes:
-       - Label: le nom de l'option
-       - Prix (en euros, nombre entier)
+    1. Un nom descriptif pr\xE9cis (pas de nom g\xE9n\xE9rique)
+    2. Une description courte et utile (max 80 caract\xE8res)
+    3. Trois options de prix avec:
+       - Label court mais descriptif
+       - Prix r\xE9aliste (en euros, nombre entier)
        - Un lien e-commerce fictif
     
     Retourne le r\xE9sultat sous forme de JSON:
     {
       "suggestions": [
         {
-          "name": "Nom du cadeau",
-          "description": "Description du cadeau avec justification",
+          "name": "Nom pr\xE9cis du cadeau (pas de nom g\xE9n\xE9rique)",
+          "description": "Description br\xE8ve et concr\xE8te (max 80 caract\xE8res)",
           "category": "${r}",
           "pricePoints": [
-            {"label": "Option Budget", "price": 15, "link": "https://example.com/budget"},
-            {"label": "Option Standard", "price": 30, "link": "https://example.com/standard"},
-            {"label": "Option Premium", "price": 60, "link": "https://example.com/premium"}
+            {"label": "Option \xE9conomique", "price": 15, "link": "https://example.com/budget"},
+            {"label": "Option standard", "price": 30, "link": "https://example.com/standard"},
+            {"label": "Option premium", "price": 60, "link": "https://example.com/premium"}
           ]
         },
         ...
