@@ -1,0 +1,74 @@
+<div class="modal" [class.show]="show" [style.display]="show ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Suggestions de cadeaux par IA</h5>
+        <button type="button" class="btn-close" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="aiPrompt" class="form-label">Décrivez le type de cadeau recherché</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="aiPrompt" [(ngModel)]="prompt" placeholder="Ex: Un cadeau pour un adolescent qui aime les jeux vidéo et la science-fiction">
+            <button class="btn btn-primary" type="button" (click)="generateSuggestions()" [disabled]="!prompt.trim() || isLoading">
+              <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              <i *ngIf="!isLoading" class="bi bi-search me-1"></i>
+              Générer
+            </button>
+          </div>
+        </div>
+        
+        <div *ngIf="isLoading" class="text-center py-4">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Génération en cours...</span>
+          </div>
+          <p class="mt-2">Génération des suggestions en cours...</p>
+        </div>
+        
+        <div *ngIf="suggestions.length > 0">
+          <h6 class="mb-3">Résultats:</h6>
+          
+          <div class="card mb-3" *ngFor="let suggestion of suggestions">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">{{ suggestion.name }}</h5>
+              <button class="btn btn-sm btn-success" (click)="onAddSuggestion(suggestion)">
+                <i class="bi bi-plus-circle me-1"></i> Ajouter à ma liste
+              </button>
+            </div>
+            <div class="card-body">
+              <p class="card-text">{{ suggestion.description }}</p>
+              
+              <h6 class="mt-3 mb-2">Options de prix:</h6>
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Option</th>
+                      <th>Prix</th>
+                      <th>Lien</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let point of suggestion.pricePoints">
+                      <td>{{ point.label }}</td>
+                      <td>{{ point.price }} €</td>
+                      <td>
+                        <a [href]="point.link" target="_blank" class="link-primary">
+                          <i class="bi bi-box-arrow-up-right me-1"></i>Voir
+                        </a>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeModal()">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="show"></div>

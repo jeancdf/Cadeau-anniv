@@ -1,0 +1,255 @@
+<div class="container-fluid py-4">
+  <div class="row">
+    <!-- Panneau latéral (Formulaire et IA) -->
+    <div class="col-lg-4 mb-4">
+      <!-- Carte du formulaire -->
+      <div class="card shadow-lg mb-4 animate-fade-in">
+        <div class="card-header">
+          <h4 class="mb-0">{{ editMode ? 'Modifier' : 'Nouveau' }} cadeau</h4>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="giftForm" (ngSubmit)="onSubmit()">
+            <div class="mb-3">
+              <label for="name" class="form-label">Nom du cadeau</label>
+              <input type="text" class="form-control" id="name" formControlName="name" placeholder="Que voulez-vous offrir?">
+              <div class="text-danger small mt-1" *ngIf="giftForm.get('name')?.invalid && giftForm.get('name')?.touched">
+                Ce champ est requis
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="description" class="form-label">Description</label>
+              <textarea class="form-control" id="description" formControlName="description" rows="2" placeholder="Détails du cadeau"></textarea>
+            </div>
+            
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label mb-0">Options de prix</label>
+                <button type="button" class="btn btn-sm btn-primary" (click)="addPricePoint()">
+                  <i class="bi bi-plus-circle"></i> Ajouter
+                </button>
+              </div>
+              
+              <div formArrayName="pricePoints" class="animate-fade-in">
+                <div *ngFor="let pricePoint of pricePointsArray.controls; let i = index" [formGroupName]="i" class="card mb-2 border border-light">
+                  <div class="card-body p-3">
+                    <div class="row g-2">
+                      <div class="col-md-3">
+                        <input type="text" class="form-control form-control-sm" formControlName="label" placeholder="Label">
+                      </div>
+                      <div class="col-md-3">
+                        <div class="input-group input-group-sm">
+                          <input type="number" class="form-control" formControlName="price" min="0">
+                          <span class="input-group-text">€</span>
+                        </div>
+                      </div>
+                      <div class="col-md-5">
+                        <input type="url" class="form-control form-control-sm" formControlName="link" placeholder="https://...">
+                      </div>
+                      <div class="col-md-1 d-flex align-items-center justify-content-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger" (click)="removePricePoint(i)">
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div *ngIf="pricePointsArray.length === 0" class="text-center p-3 rounded bg-light">
+                <p class="mb-0 text-muted small">Ajoutez des options de prix</p>
+              </div>
+            </div>
+            
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="giftForm.invalid">
+                <i class="bi" [ngClass]="editMode ? 'bi-save' : 'bi-plus-lg'"></i>
+                {{ editMode ? 'Mettre à jour' : 'Ajouter à ma liste' }}
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" (click)="resetForm()" *ngIf="editMode">
+                <i class="bi bi-arrow-left"></i> Annuler
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Carte Importer Liste -->
+      <div class="card shadow-lg mb-4 animate-slide-up">
+        <div class="card-header bg-gradient">
+          <h4 class="mb-0"><i class="bi bi-cloud-upload me-2"></i>Importer ma liste</h4>
+        </div>
+        <div class="card-body">
+          <p class="small text-muted mb-3">Collez votre liste de cadeaux existante pour l'importer directement</p>
+          <div class="mb-3">
+            <textarea 
+              class="form-control" 
+              rows="4" 
+              [(ngModel)]="existingListText" 
+              placeholder="Collez votre liste ici..."
+            ></textarea>
+          </div>
+          <div class="d-grid">
+            <button 
+              class="btn btn-success" 
+              [disabled]="!existingListText.trim() || isImportingList"
+              (click)="importExistingList()"
+            >
+              <span *ngIf="isImportingList" class="spinner-border spinner-border-sm me-1"></span>
+              <i *ngIf="!isImportingList" class="bi bi-upload me-1"></i>
+              Importer la liste
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Carte IA -->
+      <div class="card shadow-lg animate-slide-up">
+        <div class="card-header bg-gradient">
+          <h4 class="mb-0"><i class="bi bi-robot me-2"></i>Suggestions IA</h4>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="aiPrompt" class="form-label">Que recherchez-vous?</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="aiPrompt" [(ngModel)]="aiPrompt" 
+                placeholder="Ex: Cadeau pour un fan de musique...">
+              <button class="btn btn-primary" (click)="generateAiSuggestions()" [disabled]="!aiPrompt.trim() || isLoadingAi">
+                <span *ngIf="isLoadingAi" class="spinner-border spinner-border-sm me-1"></span>
+                <i *ngIf="!isLoadingAi" class="bi bi-magic"></i>
+                Générer
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="isLoadingAi" class="text-center py-4">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2">Recherche d'idées...</p>
+          </div>
+
+          <div *ngIf="aiSuggestions.length > 0" class="mt-4 animate-fade-in">
+            <h5 class="mb-3 border-bottom pb-2">Idées proposées</h5>
+            
+            <div class="suggestion-cards">
+              <div *ngFor="let suggestion of aiSuggestions" class="suggestion-card mb-3 animate-slide-up">
+                <div class="card border-0 shadow-sm">
+                  <div class="card-body">
+                    <h5 class="card-title text-primary">{{ suggestion.name }}</h5>
+                    <p class="card-text small">{{ suggestion.description }}</p>
+                    
+                    <div class="price-options mt-3">
+                      <div *ngFor="let point of suggestion.pricePoints" class="price-option mb-2">
+                        <span class="badge bg-light text-dark me-2">{{ point.label }}</span>
+                        <span class="badge bg-primary me-2">{{ point.price }} €</span>
+                        <a [href]="point.link" target="_blank" class="small link-primary">
+                          <i class="bi bi-link-45deg"></i> Voir
+                        </a>
+                      </div>
+                    </div>
+                    
+                    <button class="btn btn-success btn-sm mt-2 w-100" (click)="addAiSuggestion(suggestion)">
+                      <i class="bi bi-plus-circle"></i> Ajouter à ma liste
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Liste des cadeaux -->
+    <div class="col-lg-8">
+      <div class="card shadow-lg animate-fade-in">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h4 class="mb-0"><i class="bi bi-gift me-2"></i>Ma liste de cadeaux</h4>
+          <button class="btn btn-success" (click)="exportList()">
+            <i class="bi bi-download"></i> Exporter
+          </button>
+        </div>
+        <div class="card-body">
+          <!-- Loading spinner -->
+          <div *ngIf="isLoading" class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2">Chargement de votre liste...</p>
+          </div>
+          
+          <!-- Empty state -->
+          <div *ngIf="!isLoading && gifts.length === 0" class="text-center py-5 animate-fade-in">
+            <div class="empty-state">
+              <i class="bi bi-inbox display-1 text-muted"></i>
+              <h5 class="mt-3">Votre liste est vide</h5>
+              <p class="text-muted">Ajoutez des cadeaux ou utilisez l'IA pour obtenir des suggestions</p>
+            </div>
+          </div>
+          
+          <!-- Gift list with drag & drop -->
+          <div cdkDropList (cdkDropListDropped)="drop($event)" *ngIf="!isLoading && gifts.length > 0">
+            <!-- Helper text -->
+            <div class="alert alert-info mb-4 animate-fade-in">
+              <i class="bi bi-info-circle me-2"></i> Glissez-déposez pour réorganiser les priorités
+            </div>
+            
+            <!-- Gift cards -->
+            <div class="row" cdkDropListOrientation="horizontal">
+              <div *ngFor="let gift of gifts" class="col-md-6 mb-4 animate-slide-up" cdkDrag>
+                <div class="card h-100 gift-card">
+                  <!-- Handle for drag -->
+                  <div class="drag-handle position-absolute top-0 end-0 mt-2 me-2" cdkDragHandle>
+                    <i class="bi bi-grip-vertical"></i>
+                  </div>
+                  
+                  <div class="card-header">
+                    <h5 class="mb-0">{{ gift.name }}</h5>
+                  </div>
+                  
+                  <div class="card-body">
+                    <p class="card-text" *ngIf="gift.description">{{ gift.description }}</p>
+                    
+                    <div class="price-points mt-3">
+                      <h6 class="text-muted mb-2 small"><i class="bi bi-tag me-1"></i>OPTIONS</h6>
+                      <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                          <thead>
+                            <tr>
+                              <th>Option</th>
+                              <th class="text-end">Prix</th>
+                              <th class="text-center">Lien</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngFor="let point of gift.pricePoints">
+                              <td>{{ point.label }}</td>
+                              <td class="text-end">
+                                <span class="badge bg-primary">{{ point.price }} €</span>
+                              </td>
+                              <td class="text-center">
+                                <a [href]="point.link" target="_blank" class="btn btn-sm btn-light">
+                                  <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="card-footer bg-transparent d-flex justify-content-between">
+                    <button class="btn btn-sm btn-outline-primary" (click)="editGift(gift)">
+                      <i class="bi bi-pencil me-1"></i> Modifier
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="deleteGift(gift._id)">
+                      <i class="bi bi-trash me-1"></i> Supprimer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
