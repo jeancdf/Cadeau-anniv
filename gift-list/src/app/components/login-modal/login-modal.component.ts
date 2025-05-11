@@ -69,9 +69,10 @@ import { AuthService } from '../../services/auth.service';
     .modal-content {
       width: 100%;
       max-width: 400px;
-      background-color: #fff;
+      background-color: var(--modal-bg, #fff);
+      color: var(--modal-color, #212529);
       border-radius: 0.3rem;
-      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      box-shadow: 0 0.5rem 1rem var(--shadow-color, rgba(0, 0, 0, 0.15));
       margin: 1.75rem;
       animation: fadeIn 0.3s ease;
     }
@@ -81,13 +82,30 @@ import { AuthService } from '../../services/auth.service';
       align-items: center;
       justify-content: space-between;
       padding: 1rem;
-      border-bottom: 1px solid #dee2e6;
+      border-bottom: 1px solid var(--border-color, #dee2e6);
       border-top-left-radius: 0.3rem;
       border-top-right-radius: 0.3rem;
     }
     
     .modal-body {
       padding: 1rem;
+    }
+    
+    :host-context(.dark-theme) .form-label {
+      color: var(--card-color);
+    }
+    
+    :host-context(.dark-theme) .form-control {
+      background-color: var(--input-bg);
+      color: var(--input-color);
+      border-color: var(--input-border);
+    }
+    
+    :host-context(.dark-theme) .form-control:focus {
+      background-color: var(--input-bg);
+      color: var(--input-color);
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 0.25rem rgba(var(--primary-color-rgb, 99, 102, 241), 0.25);
     }
     
     @keyframes fadeIn {

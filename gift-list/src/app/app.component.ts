@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { GiftListComponent } from './gift-list/gift-list.component';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
@@ -25,10 +25,13 @@ import { ThemeService } from './services/theme.service';
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   title = 'gift-list';
   isAuthenticated = false;
   showModal = false;
+  
+  // Store the event handler reference for proper removal
+  private showLoginModalHandler = () => this.showLoginModal();
   
   constructor(
     private http: HttpClient,
@@ -47,6 +50,14 @@ export class AppComponent implements OnInit {
     console.log('API URL:', environment.apiUrl);
 
     this.checkBackendConnection();
+    
+    // Add event listener for custom login modal event
+    window.addEventListener('show-login-modal', this.showLoginModalHandler);
+  }
+  
+  ngOnDestroy(): void {
+    // Remove event listener when component is destroyed
+    window.removeEventListener('show-login-modal', this.showLoginModalHandler);
   }
   
   showLoginModal(): void {

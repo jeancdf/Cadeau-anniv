@@ -6,6 +6,14 @@ import { GiftAiService } from '../services/gift-ai.service';
 import { CdkDragDrop, moveItemInArray, CdkDropList, CdkDrag } from '@angular/cdk/drag-drop';
 import { FormGroup, FormBuilder, FormArray, Validators } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
+
+interface CheaperAlternative {
+  label: string;
+  price: number;
+  link: string;
+  description: string;
+}
 
 @Component({
   selector: 'app-gift-list',
@@ -38,13 +46,36 @@ export class GiftListComponent implements OnInit, OnDestroy {
   aiMaxPrice = 200;
   aiPreferences = '';
   aiDislikes = '';
-
+  
+  // AI reasoning information
+  aiAnalysisIntro = '';
+  aiAnalysisMethod = '';
+  aiIdentifiedInterests: string[] = [];
+  aiInterestPatterns = '';
+  showAiReasoning = false;
+  
+  // AI category exploration
+  suggestedCategories: any[] = [];
+  isLoadingSuggestions = false;
+  selectedCategory: string = '';
+  showCategorySuggestions = false;
+  categoryAnalysisExplanation = '';
+  
   // Find Link Modal data
   showFindLinkModal = false;
   searchingForLinks = false;
   alternativeLinks: { url: string, title: string, price?: string }[] = [];
   currentSearchItem = '';
   currentPricePoint: any = null;
+
+  // Cheaper Alternatives Modal data
+  showCheaperAlternativesModal = false;
+  loadingCheaperAlternatives = false;
+  cheaperAlternatives: CheaperAlternative[] = [];
+  currentProductName = '';
+  currentProductOption = '';
+  currentProductPrice = 0;
+  currentGiftForAlternatives: any = null;
 
   // References to modal elements for focus management
   @ViewChild('modalContent') modalContent!: ElementRef;
@@ -54,11 +85,16 @@ export class GiftListComponent implements OnInit, OnDestroy {
   private lastFocusedElement: HTMLElement | null = null;
   private modalFocusableElements: HTMLElement[] = [];
 
+  // Add after isLoadingSuggestions = false;
+  showFullAnalysis = false;
+  expandedSuggestions: boolean[] = [];
+
   constructor(
     private giftService: GiftService,
     private giftAiService: GiftAiService,
     private fb: FormBuilder,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router
   ) {
     this.giftForm = this.createGiftForm();
   }
@@ -211,11 +247,10 @@ export class GiftListComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Gérer le drag & drop pour réordonner les cadeaux
-  drop(event: CdkDragDrop<string[]>): void {
-    moveItemInArray(this.gifts, event.previousIndex, event.currentIndex);
-    
-    // Mettre à jour les priorités sur le backend
+  /**
+   * Updates the priorities of all gifts based on their current order
+   */
+  private updateGiftPriorities(): void {
     this.gifts.forEach((gift, index) => {
       const updatedGift = { ...gift, priority: index };
       this.giftService.updateGift(gift.id, updatedGift).subscribe({
@@ -223,12 +258,47 @@ export class GiftListComponent implements OnInit, OnDestroy {
       });
     });
   }
-
+  
+  /**
+   * Moves a gift up or down in the priority list
+   * @param gift The gift to move
+   * @param currentIndex The current index of the gift
+   * @param direction The direction to move ('up' or 'down')
+   */
+  moveGiftPosition(gift: any, currentIndex: number, direction: 'up' | 'down'): void {
+    // Calculate new index based on direction
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    
+    // Ensure the new index is within bounds
+    if (newIndex < 0 || newIndex >= this.gifts.length) {
+      return;
+    }
+    
+    // Reorder the gifts array
+    moveItemInArray(this.gifts, currentIndex, newIndex);
+    
+    // Update the priorities on the backend
+    this.updateGiftPriorities();
+  }
+  
+  /**
+   * Handle drag and drop reordering of gifts
+   */
+  drop(event: CdkDragDrop<string[]>): void {
+    moveItemInArray(this.gifts, event.previousIndex, event.currentIndex);
+    
+    // Update priorities on the backend
+    this.updateGiftPriorities();
+  }
+  
   // Générer des suggestions d'IA avec préférences
   generateAiSuggestions(): void {
     if (!this.aiPrompt.trim()) {
       return;
     }
+    
+    // Reset reasoning info
+    this.resetAiReasoning();
     
     // Build a more detailed prompt with preferences
     let enhancedPrompt = this.aiPrompt;
@@ -245,17 +315,125 @@ export class GiftListComponent implements OnInit, OnDestroy {
       enhancedPrompt += ` Je n'aime pas: ${this.aiDislikes}.`;
     }
     
+    // Si une catégorie spécifique est sélectionnée, utiliser la méthode dédiée
+    if (this.selectedCategory) {
+      this.generateCategorySpecificSuggestions(enhancedPrompt);
+    } else {
+      this.isLoadingAi = true;
+      
+      // Passer la liste des cadeaux existants à l'IA pour une personnalisation améliorée
+      this.giftAiService.generateGiftSuggestions(enhancedPrompt, this.gifts).subscribe({
+        next: (data) => {
+          this.aiSuggestions = data.suggestions || [];
+          
+          // Stocker les informations de raisonnement de l'IA
+          this.aiAnalysisIntro = data.analysisIntro || '';
+          this.aiAnalysisMethod = data.analysisMethod || '';
+          this.aiIdentifiedInterests = data.identifiedInterests || [];
+          this.showAiReasoning = true;
+          
+          this.isLoadingAi = false;
+          
+          // Charger automatiquement les suggestions de catégories à explorer
+          if (this.gifts.length > 0) {
+            this.loadCategorySuggestions();
+          }
+        },
+        error: (error) => {
+          console.error('Erreur lors de la génération de suggestions:', error);
+          this.isLoadingAi = false;
+        }
+      });
+    }
+  }
+  
+  /**
+   * Réinitialise les informations de raisonnement de l'IA
+   */
+  resetAiReasoning(): void {
+    this.aiAnalysisIntro = '';
+    this.aiAnalysisMethod = '';
+    this.aiIdentifiedInterests = [];
+    this.aiInterestPatterns = '';
+    this.showAiReasoning = false;
+    this.categoryAnalysisExplanation = '';
+    this.showFullAnalysis = false;
+    this.expandedSuggestions = [];
+  }
+  
+  /**
+   * Charge les suggestions de catégories à explorer
+   */
+  loadCategorySuggestions(): void {
+    this.isLoadingSuggestions = true;
+    this.showCategorySuggestions = true;
+    
+    this.giftAiService.suggestCategoriesToExplore(this.gifts).subscribe({
+      next: (data) => {
+        this.suggestedCategories = data.suggestedCategories || [];
+        this.categoryAnalysisExplanation = data.analysisExplanation || '';
+        this.aiInterestPatterns = data.interestPatterns || '';
+        this.isLoadingSuggestions = false;
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement des suggestions de catégories:', error);
+        this.isLoadingSuggestions = false;
+      }
+    });
+  }
+  
+  /**
+   * Génère des suggestions basées sur une catégorie spécifique
+   */
+  generateCategorySpecificSuggestions(prompt: string): void {
     this.isLoadingAi = true;
-    this.giftAiService.generateGiftSuggestions(enhancedPrompt).subscribe({
+    
+    this.giftAiService.generateCategorySpecificSuggestions(
+      prompt, 
+      this.selectedCategory, 
+      this.gifts
+    ).subscribe({
       next: (data) => {
         this.aiSuggestions = data.suggestions || [];
         this.isLoadingAi = false;
       },
       error: (error) => {
-        console.error('Erreur lors de la génération de suggestions:', error);
+        console.error('Erreur lors de la génération de suggestions par catégorie:', error);
         this.isLoadingAi = false;
       }
     });
+  }
+  
+  /**
+   * Sélectionne une catégorie à explorer
+   */
+  selectCategory(categoryName: string): void {
+    this.selectedCategory = categoryName;
+    
+    // Générer automatiquement des suggestions dans cette catégorie
+    // si un prompt est déjà saisi
+    if (this.aiPrompt.trim()) {
+      // Construire le prompt enrichi
+      let enhancedPrompt = this.aiPrompt;
+      enhancedPrompt += `. Budget entre ${this.aiMinPrice}€ et ${this.aiMaxPrice}€.`;
+      
+      if (this.aiPreferences?.trim()) {
+        enhancedPrompt += ` J'aime: ${this.aiPreferences}.`;
+      }
+      
+      if (this.aiDislikes?.trim()) {
+        enhancedPrompt += ` Je n'aime pas: ${this.aiDislikes}.`;
+      }
+      
+      this.generateCategorySpecificSuggestions(enhancedPrompt);
+    }
+  }
+  
+  /**
+   * Réinitialise la sélection de catégorie
+   */
+  resetCategorySelection(): void {
+    this.selectedCategory = '';
   }
 
   // Ajouter une suggestion d'IA à la liste
@@ -373,7 +551,7 @@ export class GiftListComponent implements OnInit, OnDestroy {
           
           // If we found a working link, offer to use it immediately
           if (this.alternativeLinks.length === 1 && this.currentGiftId && this.currentPricePoint) {
-            setTimeout(() => {
+    setTimeout(() => {
               if (confirm(`Un lien fonctionnel a été trouvé pour "${giftName}".\nVoulez-vous l'ajouter automatiquement à votre liste?`)) {
                 this.updateGiftLink(this.alternativeLinks[0].url);
               }
@@ -397,28 +575,28 @@ export class GiftListComponent implements OnInit, OnDestroy {
   // Generate fallback search links when AI can't find specific products
   private generateFallbackSearchLinks(searchTerm: string): void {
     const searchQuery = encodeURIComponent(searchTerm);
-    this.alternativeLinks = [
-      {
-        url: 'https://www.amazon.fr/s?k=' + searchQuery,
-        title: 'Rechercher sur Amazon',
-        price: 'Prix variables'
-      },
-      {
-        url: 'https://www.fnac.com/SearchResult/ResultList.aspx?Search=' + searchQuery,
-        title: 'Rechercher sur Fnac',
-        price: 'Prix variables'
-      },
-      {
-        url: 'https://www.cdiscount.com/search/10/' + searchQuery + '.html',
-        title: 'Rechercher sur Cdiscount',
-        price: 'Prix variables'
-      },
-      {
-        url: 'https://www.darty.com/nav/recherche?text=' + searchQuery,
-        title: 'Rechercher sur Darty',
-        price: 'Prix variables'
-      }
-    ];
+      this.alternativeLinks = [
+        {
+          url: 'https://www.amazon.fr/s?k=' + searchQuery,
+          title: 'Rechercher sur Amazon',
+          price: 'Prix variables'
+        },
+        {
+          url: 'https://www.fnac.com/SearchResult/ResultList.aspx?Search=' + searchQuery,
+          title: 'Rechercher sur Fnac',
+          price: 'Prix variables'
+        },
+        {
+          url: 'https://www.cdiscount.com/search/10/' + searchQuery + '.html',
+          title: 'Rechercher sur Cdiscount',
+          price: 'Prix variables'
+        },
+        {
+          url: 'https://www.darty.com/nav/recherche?text=' + searchQuery,
+          title: 'Rechercher sur Darty',
+          price: 'Prix variables'
+        }
+      ];
   }
 
   // Setup keyboard trap for the modal
@@ -535,5 +713,106 @@ export class GiftListComponent implements OnInit, OnDestroy {
   openLink(url: string): void {
     const validUrl = this.ensureValidUrl(url);
     window.open(validUrl, '_blank');
+  }
+
+  // Navigate to show login modal
+  showLoginModal(): void {
+    // Emit an event that can be caught by app.component to show the login modal
+    window.dispatchEvent(new CustomEvent('show-login-modal'));
+  }
+  
+  /**
+   * Finds cheaper alternatives for an expensive product
+   * @param gift The gift containing the expensive product
+   * @param pricePoint The specific price point to find alternatives for
+   */
+  findCheaperAlternatives(gift: any, pricePoint: any): void {
+    this.currentGiftForAlternatives = gift;
+    this.currentProductName = gift.name;
+    this.currentProductOption = pricePoint.label;
+    this.currentProductPrice = pricePoint.price;
+    this.cheaperAlternatives = [];
+    this.loadingCheaperAlternatives = true;
+    this.showCheaperAlternativesModal = true;
+    
+    this.giftAiService.findCheaperAlternatives(gift.name, pricePoint).subscribe({
+      next: (data) => {
+        if (data && data.alternatives) {
+          this.cheaperAlternatives = data.alternatives;
+        }
+        this.loadingCheaperAlternatives = false;
+      },
+      error: (error) => {
+        console.error('Erreur lors de la recherche d\'alternatives moins chères:', error);
+        this.loadingCheaperAlternatives = false;
+      }
+    });
+  }
+  
+  /**
+   * Closes the cheaper alternatives modal
+   */
+  closeCheaperAlternativesModal(): void {
+    this.showCheaperAlternativesModal = false;
+    this.cheaperAlternatives = [];
+    this.currentProductName = '';
+    this.currentProductOption = '';
+    this.currentProductPrice = 0;
+    this.currentGiftForAlternatives = null;
+  }
+  
+  /**
+   * Adds a cheaper alternative to the gift's price points
+   * @param alternative The alternative to add
+   */
+  addCheaperAlternative(alternative: CheaperAlternative): void {
+    if (!this.currentGiftForAlternatives) {
+      return;
+    }
+    
+    // Add the new alternative to the gift's price points
+    const updatedGift = { ...this.currentGiftForAlternatives };
+    updatedGift.pricePoints.push({
+      label: alternative.label,
+      price: alternative.price,
+      link: alternative.link
+    });
+    
+    // Sort price points by price
+    updatedGift.pricePoints.sort((a: any, b: any) => a.price - b.price);
+    
+    // Update the gift in the database
+    this.giftService.updateGift(updatedGift.id, updatedGift).subscribe({
+      next: () => {
+        this.closeCheaperAlternativesModal();
+        this.loadGifts();
+        alert(`Option "${alternative.label}" ajoutée au cadeau "${updatedGift.name}"`);
+      },
+      error: (error) => {
+        console.error('Erreur lors de l\'ajout de l\'alternative:', error);
+        alert('Erreur lors de l\'ajout de l\'alternative. Veuillez réessayer.');
+      }
+    });
+  }
+
+  /**
+   * Toggles between showing full and summarized AI analysis
+   */
+  toggleFullAnalysis(): void {
+    this.showFullAnalysis = !this.showFullAnalysis;
+  }
+  
+  /**
+   * Toggles the expanded details for a specific suggestion
+   * @param index The index of the suggestion to toggle
+   */
+  toggleSuggestionDetails(index: number): void {
+    // Initialize array if needed
+    if (!this.expandedSuggestions[index]) {
+      this.expandedSuggestions[index] = false;
+    }
+    
+    // Toggle the selected suggestion's expanded state
+    this.expandedSuggestions[index] = !this.expandedSuggestions[index];
   }
 }

@@ -1,3 +1,4 @@
+/* Both drag-and-drop and arrow controls are available for reordering */
 .drag-handle {
   cursor: grab;
   color: var(--gray-400);
@@ -191,6 +192,49 @@
   border: 2px solid white;
 }
 
+.ranking-controls {
+  z-index: 12;
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-top: 8px;
+  margin-right: 8px;
+}
+
+.ranking-controls .btn-group-vertical {
+  display: flex;
+  flex-direction: column;
+}
+
+.ranking-controls .btn {
+  padding: 0px 4px;
+  font-size: 12px;
+  height: 20px;
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+  opacity: 0.8;
+  border-radius: 3px;
+  transition: opacity 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.ranking-controls .btn i {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.ranking-controls .btn:hover:not(:disabled) {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.ranking-controls .btn:disabled {
+  opacity: 0.4;
+}
+
 /* Dark theme specific adjustments */
 :host-context(.dark-theme) .card-footer {
   background-color: var(--card-bg);
@@ -217,14 +261,19 @@
 :host-context(.dark-theme) .table th,
 :host-context(.dark-theme) .table td {
   border-color: var(--border-color);
+  background-color: var(--card-bg) !important;
+}
+
+:host-context(.dark-theme) .table tr {
+  background-color: var(--card-bg) !important;
 }
 
 :host-context(.dark-theme) .table-hover tbody tr:hover {
-  background-color: var(--gray-100);
+  background-color: var(--gray-100) !important;
 }
 
 :host-context(.dark-theme) .table thead th {
-  background-color: var(--gray-100);
+  background-color: var(--gray-100) !important;
   color: var(--card-color);
   border-color: var(--border-color);
 }
@@ -243,4 +292,49 @@
 
 :host-context(.dark-theme) .price-options .price-option {
   border-color: var(--border-color);
+}
+
+/* Target the price points table specifically */
+:host-context(.dark-theme) .price-points .table,
+:host-context(.dark-theme) .price-points .table tbody,
+:host-context(.dark-theme) .price-points .table tr,
+:host-context(.dark-theme) .price-points .table td,
+:host-context(.dark-theme) .price-points .table th {
+  background-color: var(--card-bg) !important;
+  color: var(--card-color) !important;
+}
+
+:host-context(.dark-theme) .price-points .table-hover tbody tr:hover {
+  background-color: var(--gray-100) !important;
+}
+
+.category-card {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.category-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(23, 162, 184, 0.3);
+}
+
+.category-card .card-title {
+  border-bottom: 2px solid rgba(23, 162, 184, 0.2);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.category-examples {
+  background-color: rgba(23, 162, 184, 0.05);
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.category-examples ul {
+  margin-bottom: 0;
+}
+
+.badge.bg-success {
+  font-size: 14px;
+  padding: 6px 10px;
 }

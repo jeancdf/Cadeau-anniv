@@ -1,6 +1,6 @@
 {
   "name": "gift-list",
-  "version": "1.0.6",
+  "version": "1.0.21",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

@@ -4,6 +4,7 @@
 /* Light Theme (default) Variables */
 :root, .light-theme {
   --primary-color: #6366f1;
+  --primary-color-rgb: 99, 102, 241;
   --primary-hover: #4f46e5;
   --secondary-color: #ec4899;
   --dark-color: #1e293b;
@@ -39,6 +40,7 @@
 /* Dark Theme Variables */
 .dark-theme {
   --primary-color: #818cf8;
+  --primary-color-rgb: 129, 140, 248;
   --primary-hover: #6366f1;
   --secondary-color: #f472b6;
   --dark-color: #e2e8f0;
@@ -106,20 +108,30 @@ body {
 
 .dark-theme .table {
   color: var(--body-color);
+  background-color: var(--card-bg);
 }
 
 .dark-theme .table th,
 .dark-theme .table td {
   border-color: var(--border-color);
+  background-color: var(--card-bg) !important;
+}
+
+.dark-theme .table tr {
+  background-color: var(--card-bg) !important;
+}
+
+.dark-theme .table tbody {
+  background-color: var(--card-bg) !important;
 }
 
 .dark-theme .table thead th {
-  background-color: var(--gray-100);
+  background-color: var(--gray-100) !important;
   color: var(--body-color);
 }
 
 .dark-theme .table-hover tbody tr:hover {
-  background-color: var(--gray-100);
+  background-color: var(--gray-100) !important;
 }
 
 .dark-theme .bg-light {
@@ -299,4 +311,33 @@ input.form-control:focus, textarea.form-control:focus, select.form-control:focus
 .dark-theme .badge.bg-primary {
   background-color: var(--primary-color) !important;
   color: white !important;
+}
+
+/* Override Bootstrap's default table styles */
+.dark-theme .table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: var(--card-bg) !important;
+}
+
+.dark-theme .table-striped > tbody > tr:nth-of-type(even) {
+  background-color: var(--card-bg) !important;
+}
+
+.dark-theme .table-striped > tbody > tr:nth-of-type(odd) > td,
+.dark-theme .table-striped > tbody > tr:nth-of-type(odd) > th {
+  background-color: var(--card-bg) !important;
+}
+
+.dark-theme .table-striped > tbody > tr:nth-of-type(even) > td,
+.dark-theme .table-striped > tbody > tr:nth-of-type(even) > th {
+  background-color: var(--card-bg) !important;
+}
+
+/* Override Bootstrap's :hover background color */
+.dark-theme .table-hover > tbody > tr:hover {
+  background-color: var(--gray-100) !important;
+}
+
+.dark-theme .table-hover > tbody > tr:hover > td,
+.dark-theme .table-hover > tbody > tr:hover > th {
+  background-color: var(--gray-100) !important;
 }

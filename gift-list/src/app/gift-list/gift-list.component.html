@@ -1,7 +1,7 @@
 <div class="container-fluid py-4">
   <div class="row">
     <!-- Panneau latéral (Formulaire et IA) -->
-    <div class="col-lg-4 mb-4">
+    <div class="col-lg-4 mb-4" *ngIf="isAuthenticated">
       <!-- Carte du formulaire -->
       <div class="card shadow-lg mb-4 animate-fade-in">
         <div class="card-header">
@@ -127,6 +127,21 @@
             <div class="card-body">
               <h6 class="mb-2"><i class="bi bi-sliders me-1"></i> Préférences pour l'IA</h6>
               
+              <!-- Selected Category Badge (if any) -->
+              <div *ngIf="selectedCategory" class="mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <label class="form-label mb-0">Catégorie explorée:</label>
+                  <button class="btn btn-sm btn-outline-secondary" (click)="resetCategorySelection()">
+                    <i class="bi bi-x"></i> Réinitialiser
+                  </button>
+                </div>
+                <div class="mt-2">
+                  <span class="badge bg-success p-2">
+                    <i class="bi bi-tag me-1"></i> {{ selectedCategory }}
+                  </span>
+                </div>
+              </div>
+              
               <!-- Price Range -->
               <div class="mb-3">
                 <label class="form-label d-flex justify-content-between">
@@ -172,15 +187,110 @@
             <p class="mt-2">Recherche d'idées...</p>
           </div>
 
+          <!-- AI Reasoning Section - More concise with see more toggle -->
+          <div *ngIf="showAiReasoning && !isLoadingAi" class="card border-primary mb-4 animate-fade-in">
+            <div class="card-header bg-primary text-white">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-braces me-2"></i>Analyse de l'IA</h5>
+                <button type="button" class="btn btn-sm btn-outline-light" (click)="showAiReasoning = !showAiReasoning">
+                  <i class="bi" [ngClass]="showAiReasoning ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <!-- Short analysis summary -->
+              <p class="mb-2" *ngIf="aiAnalysisIntro">
+                {{ aiAnalysisIntro.length > 120 ? (aiAnalysisIntro | slice:0:120) + '...' : aiAnalysisIntro }}
+                <button *ngIf="aiAnalysisIntro.length > 120" (click)="toggleFullAnalysis()" class="btn btn-link btn-sm p-0">
+                  {{ showFullAnalysis ? 'Voir moins' : 'Voir plus' }}
+                </button>
+              </p>
+              
+              <!-- Full analysis when expanded -->
+              <div *ngIf="showFullAnalysis" class="mt-3 animate-fade-in">
+                <div class="reasoning-section mb-3" *ngIf="aiAnalysisMethod">
+                  <h6 class="text-primary mb-2"><i class="bi bi-search me-1"></i>Méthode de sélection</h6>
+                  <p class="reasoning-text">{{ aiAnalysisMethod }}</p>
+                </div>
+              </div>
+              
+              <!-- Always show interests -->
+              <div class="reasoning-section" *ngIf="aiIdentifiedInterests && aiIdentifiedInterests.length > 0">
+                <h6 class="text-primary mb-2"><i class="bi bi-bookmark-heart me-1"></i>Centres d'intérêt identifiés</h6>
+                <div class="interest-tags">
+                  <span *ngFor="let interest of aiIdentifiedInterests" class="badge bg-info text-white me-2 mb-2">
+                    {{ interest }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category Suggestions Section - More concise -->
+          <div *ngIf="showCategorySuggestions && !isLoadingAi" class="mt-4 animate-fade-in">
+            <div class="card border-info mb-4">
+              <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-compass me-2"></i>Catégories à explorer</h5>
+                <button *ngIf="!isLoadingSuggestions" class="btn btn-sm btn-outline-light" (click)="loadCategorySuggestions()">
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+              </div>
+              <div class="card-body">
+                <!-- Loading state -->
+                <div *ngIf="isLoadingSuggestions" class="text-center py-3">
+                  <div class="spinner-border spinner-border-sm text-info"></div>
+                  <p class="mt-2 small">Analyse de vos préférences...</p>
+                </div>
+                
+                <!-- Categories display - More concise -->
+                <div *ngIf="!isLoadingSuggestions && suggestedCategories.length > 0" class="row">
+                  <div *ngFor="let category of suggestedCategories" class="col-md-6 mb-3">
+                    <div class="card h-100 category-card border-info">
+                      <div class="card-body">
+                        <h6 class="card-title text-info">{{ category.name }}</h6>
+                        
+                        <div class="category-examples mt-2 mb-2">
+                          <ul class="small ps-3 mb-0">
+                            <li *ngFor="let example of category.examples.slice(0, 2)">{{ example }}</li>
+                          </ul>
+                        </div>
+                        
+                        <button class="btn btn-sm btn-info w-100" (click)="selectCategory(category.name)">
+                          <i class="bi bi-search me-1"></i> Explorer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Suggestions - More concise -->
           <div *ngIf="aiSuggestions.length > 0" class="mt-4 animate-fade-in">
-            <h5 class="mb-3 border-bottom pb-2">Idées proposées</h5>
+            <h5 class="mb-3 border-bottom pb-2">
+              <i class="bi bi-lightbulb me-2"></i>
+              {{ selectedCategory ? 'Idées: ' + selectedCategory : 'Idées proposées' }}
+            </h5>
             
             <div class="suggestion-cards">
-              <div *ngFor="let suggestion of aiSuggestions" class="suggestion-card mb-3 animate-slide-up">
+              <div *ngFor="let suggestion of aiSuggestions; let i = index" class="suggestion-card mb-3 animate-slide-up">
                 <div class="card border-0 shadow-sm">
                   <div class="card-body">
                     <h5 class="card-title text-primary">{{ suggestion.name }}</h5>
-                    <p class="card-text small">{{ suggestion.description }}</p>
+                    <p class="card-text small">
+                      {{ suggestion.description.length > 100 ? (suggestion.description | slice:0:100) + '...' : suggestion.description }}
+                      <button *ngIf="suggestion.description.length > 100 || suggestion.reasoning" 
+                              (click)="toggleSuggestionDetails(i)" 
+                              class="btn btn-link btn-sm p-0">
+                        {{ expandedSuggestions[i] ? 'Voir moins' : 'Voir plus' }}
+                      </button>
+                    </p>
+                    
+                    <!-- Detailed reasoning - collapsed by default -->
+                    <div *ngIf="expandedSuggestions[i] && suggestion.reasoning" class="reasoning-box mb-3 p-2 border-left-primary rounded bg-light animate-fade-in">
+                      <p class="mb-0 small text-muted">{{ suggestion.reasoning }}</p>
+                    </div>
                     
                     <div class="price-options mt-3">
                       <div *ngFor="let point of suggestion.pricePoints" class="price-option mb-2">
@@ -193,7 +303,7 @@
                     </div>
                     
                     <button class="btn btn-success btn-sm mt-2 w-100" (click)="addAiSuggestion(suggestion)">
-                      <i class="bi bi-plus-circle"></i> Ajouter à ma liste de souhaits
+                      <i class="bi bi-plus-circle"></i> Ajouter à ma liste
                     </button>
                   </div>
                 </div>
@@ -204,12 +314,12 @@
       </div>
     </div>
 
-    <!-- Liste des cadeaux -->
-    <div class="col-lg-8">
+    <!-- Liste des cadeaux - full width when not authenticated -->
+    <div class="col-lg-{{ isAuthenticated ? '8' : '12' }}">
       <div class="card shadow-lg animate-fade-in">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h4 class="mb-0"><i class="bi bi-gift me-2"></i>Ma liste de souhaits (cadeaux que je voudrais recevoir)</h4>
-          <button class="btn btn-success" (click)="exportList()">
+          <button class="btn btn-success" (click)="exportList()" *ngIf="isAuthenticated">
             <i class="bi bi-download"></i> Exporter
           </button>
         </div>
@@ -232,21 +342,41 @@
           <!-- Gift list with drag & drop -->
           <div cdkDropList (cdkDropListDropped)="drop($event)" *ngIf="!isLoading && gifts.length > 0">
             <!-- Helper text -->
-            <div class="alert alert-info mb-4 animate-fade-in">
+            <div class="alert alert-info mb-4 animate-fade-in" *ngIf="isAuthenticated">
               <i class="bi bi-info-circle me-2"></i> Glissez-déposez pour réorganiser les priorités
             </div>
             
             <!-- Gift cards -->
             <div class="row" cdkDropListOrientation="horizontal">
-              <div *ngFor="let gift of gifts; let i = index" class="col-md-6 mb-4 animate-slide-up" cdkDrag>
+              <div *ngFor="let gift of gifts; let i = index" class="col-md-6 mb-4 animate-slide-up" cdkDrag [cdkDragDisabled]="!isAuthenticated">
                 <div class="card h-100 gift-card">
                   <!-- Ranking badge -->
                   <div class="ranking-badge">
                     #{{ i + 1 }}
                   </div>
                   
+                  <!-- Ranking control buttons (only for authenticated users) -->
+                  <div *ngIf="isAuthenticated" class="ranking-controls">
+                    <div class="btn-group-vertical btn-group-sm">
+                      <button 
+                        class="btn btn-sm btn-light" 
+                        [disabled]="i === 0" 
+                        (click)="moveGiftPosition(gift, i, 'up')"
+                        title="Monter dans la liste">
+                        <i class="bi bi-arrow-up"></i>
+                      </button>
+                      <button 
+                        class="btn btn-sm btn-light" 
+                        [disabled]="i === gifts.length - 1" 
+                        (click)="moveGiftPosition(gift, i, 'down')"
+                        title="Descendre dans la liste">
+                        <i class="bi bi-arrow-down"></i>
+                      </button>
+                    </div>
+                  </div>
+                  
                   <!-- Handle for drag -->
-                  <div class="drag-handle position-absolute top-0 end-0 mt-2 me-2" cdkDragHandle>
+                  <div class="drag-handle position-absolute top-0 end-0 mt-2 me-2" cdkDragHandle *ngIf="isAuthenticated">
                     <i class="bi bi-grip-vertical"></i>
                   </div>
                   
@@ -273,12 +403,16 @@
                               <td>{{ point.label }}</td>
                               <td class="text-end">
                                 <span class="badge bg-primary">{{ point.price }} €</span>
+                                <!-- Add cheaper alternatives button for expensive items -->
+                                <button *ngIf="point.price > 100 && isAuthenticated" class="btn btn-sm btn-outline-warning ms-2" (click)="findCheaperAlternatives(gift, point)" title="Trouver des options moins chères">
+                                  <i class="bi bi-currency-euro"></i> Options -
+                                </button>
                               </td>
                               <td class="text-center">
                                 <a [href]="point.link" target="_blank" class="btn btn-sm btn-light me-1">
                                   <i class="bi bi-box-arrow-up-right"></i>
                                 </a>
-                                <button class="btn btn-sm btn-outline-info" (click)="findAlternativeLink(gift.name, point)" title="Trouver un lien alternatif">
+                                <button *ngIf="isAuthenticated" class="btn btn-sm btn-outline-info" (click)="findAlternativeLink(gift.name, point)" title="Trouver un lien alternatif">
                                   <i class="bi bi-search"></i>
                                 </button>
                               </td>
@@ -344,9 +478,9 @@
               <strong>Aucun lien direct n'a été trouvé</strong>
             </div>
             
-            <p class="text-muted mb-3">
+          <p class="text-muted mb-3">
               Voici des pages de recherche où vous pourriez trouver ce cadeau:
-            </p>
+          </p>
           </div>
           
           <div class="list-group shadow-sm">
@@ -372,6 +506,73 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="closeFindLinkModal()">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cheaper Alternatives Modal -->
+<div class="modal-backdrop" *ngIf="showCheaperAlternativesModal"></div>
+<div class="modal" [class.d-block]="showCheaperAlternativesModal" tabindex="-1" role="dialog" 
+    aria-labelledby="cheaperAlternativesModalLabel" [attr.aria-hidden]="!showCheaperAlternativesModal" [attr.aria-modal]="showCheaperAlternativesModal">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content shadow-lg animate-fade-in" tabindex="-1">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title" id="cheaperAlternativesModalLabel">
+          <i class="bi bi-currency-euro me-2"></i>Options moins chères pour: {{ currentProductName }}
+        </h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closeCheaperAlternativesModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="loadingCheaperAlternatives" class="text-center py-4">
+          <div class="spinner-border text-warning"></div>
+          <p class="mt-2">Recherche d'alternatives moins chères...</p>
+          <p class="text-muted small">L'IA cherche des options similaires à prix réduit</p>
+        </div>
+        
+        <div *ngIf="!loadingCheaperAlternatives">
+          <div *ngIf="cheaperAlternatives.length === 0" class="alert alert-info">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            <strong>Aucune alternative trouvée</strong>
+            <p class="mb-0 mt-2">L'IA n'a pas pu trouver d'alternatives moins chères pour ce produit.</p>
+          </div>
+          
+          <div *ngIf="cheaperAlternatives.length > 0">
+            <div class="mb-3">
+              <div class="alert alert-success">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>Alternatives trouvées!</strong>
+                <p class="mb-0">Voici des options similaires à prix réduit pour remplacer "{{ currentProductOption }}". Cliquez sur une option pour l'ajouter à votre carte.</p>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div *ngFor="let alternative of cheaperAlternatives" class="col-md-6 mb-3">
+                <div class="card h-100 shadow-sm">
+                  <div class="card-body">
+                    <h6 class="card-title text-primary">{{ alternative.label }}</h6>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                      <span class="badge bg-success">{{ alternative.price }} €</span>
+                      <span class="badge bg-light text-dark">Économie: {{ currentProductPrice - alternative.price }} €</span>
+                    </div>
+                    
+                    <p class="card-text small mt-2">{{ alternative.description }}</p>
+                    
+                    <div class="mt-3">
+                      <button class="btn btn-sm btn-success w-100" (click)="addCheaperAlternative(alternative)">
+                        <i class="bi bi-plus-circle me-1"></i> Ajouter cette option
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeCheaperAlternativesModal()">Fermer</button>
       </div>
     </div>
   </div>
