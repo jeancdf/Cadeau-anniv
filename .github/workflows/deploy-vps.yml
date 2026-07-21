@@ -26,8 +26,8 @@ jobs:
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
       SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
       QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-      QWEN_MODEL: ${{ vars.QWEN_MODEL || 'qwen3.7-plus' }}
-      QWEN_BASE_URL: ${{ vars.QWEN_BASE_URL || 'https://dashscope-us.aliyuncs.com/compatible-mode/v1' }}
+      QWEN_MODEL: ${{ vars.QWEN_MODEL || 'qwen/qwen3.7-plus' }}
+      QWEN_BASE_URL: ${{ vars.QWEN_BASE_URL || 'https://openrouter.ai/api/v1' }}
 
     steps:
       - name: Checkout

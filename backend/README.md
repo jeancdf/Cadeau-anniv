@@ -38,9 +38,9 @@ Ce backend Node.js/Express fournit les API pour l'application Liste de Cadeaux, 
    - `DATABASE_URL`: La chaîne de connexion PostgreSQL (automatiquement liée si vous utilisez render.yaml)
    - `SECRET_KEY`: clé longue utilisée pour signer les jetons administrateur
    - `ADMIN_PASSWORD`: mot de passe de l'espace administrateur
-   - `QWEN_API_KEY`: clé Alibaba Cloud Model Studio, jamais exposée au frontend
-   - `QWEN_MODEL`: modèle Qwen à utiliser (`qwen3.7-plus` par défaut)
-   - `QWEN_BASE_URL`: endpoint compatible OpenAI de la région Model Studio
+   - `QWEN_API_KEY`: clé OpenRouter, jamais exposée au frontend
+   - `QWEN_MODEL`: modèle Qwen à utiliser (`qwen/qwen3.7-plus` par défaut)
+   - `QWEN_BASE_URL`: endpoint compatible OpenAI d'OpenRouter
 
 6. Déployez le service en cliquant sur "Create Web Service"
 
@@ -62,9 +62,9 @@ Pour simplifier le déploiement, vous pouvez utiliser le fichier `render.yaml` p
    DATABASE_URL=postgres://username:password@localhost:5432/gift-list
    SECRET_KEY=votre_clé_secrète
    ADMIN_PASSWORD=votre_mot_de_passe
-   QWEN_API_KEY=votre_clé_model_studio
-   QWEN_MODEL=qwen3.7-plus
-   QWEN_BASE_URL=https://dashscope-us.aliyuncs.com/compatible-mode/v1
+   QWEN_API_KEY=votre_clé_openrouter
+   QWEN_MODEL=qwen/qwen3.7-plus
+   QWEN_BASE_URL=https://openrouter.ai/api/v1
    ```
 
 3. Installez les dépendances:

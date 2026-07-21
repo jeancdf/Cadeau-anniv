@@ -2,8 +2,8 @@ import express from 'express';
 
 const router = express.Router();
 
-const DEFAULT_QWEN_BASE_URL = 'https://dashscope-us.aliyuncs.com/compatible-mode/v1';
-const DEFAULT_QWEN_MODEL = 'qwen3.7-plus';
+const DEFAULT_QWEN_BASE_URL = 'https://openrouter.ai/api/v1';
+const DEFAULT_QWEN_MODEL = 'qwen/qwen3.7-plus';
 const MAX_ATTEMPTS = 2;
 
 const parseJsonObject = (content) => {
@@ -58,7 +58,7 @@ router.post('/ai/generate', async (req, res) => {
             },
             { role: 'user', content: prompt }
           ],
-          enable_thinking: false,
+          reasoning: { enabled: false },
           response_format: { type: 'json_object' },
           temperature: 0.7,
           max_tokens: 2000

@@ -10,9 +10,9 @@ Les secrets sont configurés uniquement dans `backend/config.env` ou dans le fic
 DATABASE_URL=postgres://postgres:mot-de-passe@localhost:5432/gift_list
 SECRET_KEY=une-cle-longue-et-aleatoire
 ADMIN_PASSWORD=un-mot-de-passe-administrateur
-QWEN_API_KEY=votre-cle-api-model-studio
-QWEN_MODEL=qwen3.7-plus
-QWEN_BASE_URL=https://dashscope-us.aliyuncs.com/compatible-mode/v1
+QWEN_API_KEY=votre-cle-api-openrouter
+QWEN_MODEL=qwen/qwen3.7-plus
+QWEN_BASE_URL=https://openrouter.ai/api/v1
 ```
 
 Ne commitez jamais ces valeurs. La clé Gemini auparavant présente dans le dépôt doit
