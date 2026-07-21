@@ -18,12 +18,12 @@ describe('AppComponent', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should render the wishlist identity', () => {
+  it('should render the guided planner identity', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('.brand__copy strong')?.textContent).toContain('La liste d’envies');
-    expect(compiled.querySelector('h1')?.textContent).toContain('Des envies');
+    expect(compiled.querySelector('.brand__copy strong')?.textContent).toContain('Gift Finder');
+    expect(compiled.querySelector('h1')?.textContent).toContain('Une liste qui tombe juste');
   });
 });

@@ -11,6 +11,8 @@ import { syncGiftModel } from './models/gift.js';
 dotenv.config({ path: './config.env' });
 
 const app = express();
+// Production traffic crosses Caddy, then the frontend nginx container.
+app.set('trust proxy', 2);
 const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.SECRET_KEY;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
@@ -77,9 +79,12 @@ app.post('/api/auth/login', (req, res) => {
   res.json(createAdminToken());
 });
 
-// La lecture de la liste reste publique, toutes les mutations nécessitent un jeton admin
+// La lecture de la liste et le nouveau chat de creation restent publics.
+// Les mutations d'administration et les anciens outils IA restent proteges.
 app.use((req, res, next) => {
-  if (req.method === 'GET' && req.path === '/api/gifts') {
+  const isPublicGiftList = req.method === 'GET' && req.path === '/api/gifts';
+  const isPublicPlannerChat = req.method === 'POST' && req.path === '/api/ai/chat';
+  if (isPublicGiftList || isPublicPlannerChat) {
     return next();
   }
 

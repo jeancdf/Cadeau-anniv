@@ -1,0 +1,300 @@
+<section class="planner" [class.planner--chat]="stage === 'chat'">
+  <div class="planner__ambient planner__ambient--one" aria-hidden="true"></div>
+  <div class="planner__ambient planner__ambient--two" aria-hidden="true"></div>
+
+  <ng-container *ngIf="stage !== 'chat'; else chatWorkspace">
+    <div class="onboarding">
+      <div class="onboarding__intro">
+        <span class="confidence-badge">
+          <i class="bi bi-stars" aria-hidden="true"></i>
+          Votre copilote cadeau
+        </span>
+        <h1>
+          Une liste qui tombe juste,<br>
+          <em>sans partir d’une idée parfaite.</em>
+        </h1>
+        <p>
+          Quelques choix rapides pour démarrer, puis discutez librement avec l’IA.
+          Elle vous guide seulement lorsque vous en avez besoin.
+        </p>
+      </div>
+
+      <div class="onboarding-card">
+        <header class="onboarding-card__header">
+          <button
+            *ngIf="stage !== 'audience'"
+            type="button"
+            class="back-button"
+            (click)="goBack()"
+            aria-label="Revenir à l’étape précédente">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          </button>
+          <div>
+            <span>Étape {{ stepNumber }} sur 3</span>
+            <div class="progress" aria-hidden="true">
+              <i *ngFor="let item of [1, 2, 3]" [class.is-active]="item <= stepNumber"></i>
+            </div>
+          </div>
+        </header>
+
+        <div *ngIf="stage === 'audience'" class="choice-step">
+          <p class="choice-step__eyebrow">Commençons simplement</p>
+          <h2>Pour qui créez-vous cette liste ?</h2>
+          <p class="choice-step__help">Ce choix adapte la façon dont l’IA vous parlera.</p>
+
+          <div class="choice-grid choice-grid--two">
+            <button
+              *ngFor="let choice of audienceChoices"
+              type="button"
+              class="choice-card"
+              (click)="selectAudience(choice.value)">
+              <span class="choice-card__icon"><i class="bi" [ngClass]="choice.icon" aria-hidden="true"></i></span>
+              <span class="choice-card__copy">
+                <strong>{{ choice.label }}</strong>
+                <small>{{ choice.description }}</small>
+              </span>
+              <i class="bi bi-arrow-up-right choice-card__arrow" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="stage === 'occasion'" class="choice-step">
+          <p class="choice-step__eyebrow">{{ audienceLabel }}</p>
+          <h2>Quelle est l’occasion ?</h2>
+          <p class="choice-step__help">Pas besoin de tout préciser maintenant.</p>
+
+          <div class="choice-grid choice-grid--occasion">
+            <button
+              *ngFor="let choice of occasionChoices"
+              type="button"
+              class="choice-card choice-card--compact"
+              (click)="selectOccasion(choice.value)">
+              <span class="choice-card__icon"><i class="bi" [ngClass]="choice.icon" aria-hidden="true"></i></span>
+              <span class="choice-card__copy">
+                <strong>{{ choice.label }}</strong>
+                <small>{{ choice.description }}</small>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="stage === 'start'" class="choice-step">
+          <p class="choice-step__eyebrow">{{ occasionLabel }} · {{ audienceLabel }}</p>
+          <h2>Comment voulez-vous commencer ?</h2>
+          <p class="choice-step__help">Ensuite, la conversation reste entièrement libre.</p>
+
+          <div class="choice-grid choice-grid--start">
+            <button
+              *ngFor="let choice of startChoices"
+              type="button"
+              class="choice-card choice-card--compact"
+              (click)="selectStartMode(choice.value)">
+              <span class="choice-card__icon"><i class="bi" [ngClass]="choice.icon" aria-hidden="true"></i></span>
+              <span class="choice-card__copy">
+                <strong>{{ choice.label }}</strong>
+                <small>{{ choice.description }}</small>
+              </span>
+              <i class="bi bi-chevron-right choice-card__arrow" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="onboarding__reassurance" aria-label="Avantages">
+        <span><i class="bi bi-lightning-charge" aria-hidden="true"></i> Démarrage immédiat</span>
+        <span><i class="bi bi-chat-dots" aria-hidden="true"></i> Conversation libre</span>
+        <span><i class="bi bi-pencil" aria-hidden="true"></i> Liste toujours modifiable</span>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-template #chatWorkspace>
+    <div class="workspace">
+      <section class="conversation" aria-labelledby="conversation-title">
+        <header class="conversation__header">
+          <div class="assistant-identity">
+            <span class="assistant-avatar"><i class="bi bi-stars" aria-hidden="true"></i></span>
+            <div>
+              <p>Assistant Gift Finder <span>En ligne</span></p>
+              <h1 id="conversation-title">Construisons la bonne liste</h1>
+            </div>
+          </div>
+          <div class="context-pills">
+            <span>{{ audienceLabel }}</span>
+            <span>{{ occasionLabel }}</span>
+          </div>
+        </header>
+
+        <div class="messages" #messageList aria-live="polite">
+          <div class="conversation-day"><span>Aujourd’hui</span></div>
+
+          <article
+            *ngFor="let message of messages; trackBy: trackMessage"
+            class="message"
+            [class.message--user]="message.role === 'user'"
+            [class.message--assistant]="message.role === 'assistant'">
+            <span *ngIf="message.role === 'assistant'" class="message__avatar" aria-hidden="true">
+              <i class="bi bi-stars"></i>
+            </span>
+
+            <div class="message__body">
+              <div class="message__bubble">{{ message.content }}</div>
+
+              <div class="suggestion-stack" *ngIf="message.suggestions?.length">
+                <article
+                  *ngFor="let suggestion of message.suggestions; trackBy: trackGift"
+                  class="suggestion-card"
+                  [class.is-selected]="isGiftSelected(suggestion)">
+                  <div class="suggestion-card__topline">
+                    <span>{{ suggestion.budgetLabel || 'Budget à préciser' }}</span>
+                    <i class="bi bi-sparkles" aria-hidden="true"></i>
+                  </div>
+                  <h3>{{ suggestion.name }}</h3>
+                  <p>{{ suggestion.description }}</p>
+                  <small *ngIf="suggestion.reason">Pourquoi : {{ suggestion.reason }}</small>
+                  <div class="suggestion-card__actions">
+                    <button
+                      type="button"
+                      class="suggestion-add"
+                      [disabled]="isGiftSelected(suggestion)"
+                      (click)="addGift(suggestion)">
+                      <i class="bi" [ngClass]="isGiftSelected(suggestion) ? 'bi-check2' : 'bi-plus-lg'" aria-hidden="true"></i>
+                      {{ isGiftSelected(suggestion) ? 'Dans ma liste' : 'Ajouter' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="suggestion-reject"
+                      [disabled]="isThinking"
+                      (click)="rejectGift(suggestion)">
+                      Pas pour moi
+                    </button>
+                  </div>
+                </article>
+              </div>
+
+              <div class="quick-replies" *ngIf="message.quickReplies?.length && message === messages[messages.length - 1] && !isThinking">
+                <button
+                  *ngFor="let reply of message.quickReplies"
+                  type="button"
+                  (click)="useQuickReply(reply)">
+                  {{ reply }}
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <article class="message message--assistant" *ngIf="isThinking">
+            <span class="message__avatar" aria-hidden="true"><i class="bi bi-stars"></i></span>
+            <div class="thinking" aria-label="L’assistant réfléchit">
+              <span></span><span></span><span></span>
+            </div>
+          </article>
+        </div>
+
+        <div class="conversation-error" *ngIf="errorMessage" role="alert">
+          <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+          <span>{{ errorMessage }}</span>
+          <button type="button" (click)="errorMessage = ''" aria-label="Fermer"><i class="bi bi-x"></i></button>
+        </div>
+
+        <div class="composer-wrap">
+          <button
+            type="button"
+            class="guide-shortcut"
+            [disabled]="isThinking"
+            (click)="askToBeGuided()">
+            <i class="bi bi-signpost-split" aria-hidden="true"></i>
+            Pose-moi une question
+          </button>
+          <div class="composer">
+            <textarea
+              #messageInput
+              [(ngModel)]="draftMessage"
+              rows="1"
+              maxlength="2000"
+              [disabled]="isThinking"
+              (keydown)="onComposerKeydown($event)"
+              placeholder="Écrivez librement…"></textarea>
+            <button
+              type="button"
+              class="send-button"
+              [disabled]="!canSend"
+              (click)="sendMessage()"
+              aria-label="Envoyer le message">
+              <i class="bi bi-arrow-up" aria-hidden="true"></i>
+            </button>
+          </div>
+          <p>Entrée pour envoyer · Maj + Entrée pour aller à la ligne</p>
+        </div>
+      </section>
+
+      <aside class="draft-list" [class.is-open]="isMobileListOpen" aria-labelledby="draft-title">
+        <header class="draft-list__header">
+          <div class="draft-list__heading">
+            <p>Votre sélection</p>
+            <h2 id="draft-title">Ma liste</h2>
+          </div>
+          <span class="gift-count">{{ selectedGifts.length }}</span>
+          <button
+            type="button"
+            class="draft-list__mobile-toggle"
+            (click)="toggleMobileList()"
+            [attr.aria-expanded]="isMobileListOpen">
+            <span>Ma liste · {{ selectedGifts.length }} idée{{ selectedGifts.length > 1 ? 's' : '' }}</span>
+            <i class="bi" [ngClass]="isMobileListOpen ? 'bi-chevron-down' : 'bi-chevron-up'" aria-hidden="true"></i>
+          </button>
+        </header>
+
+        <div class="profile-summary" *ngIf="profileSummary">
+          <i class="bi bi-person-check" aria-hidden="true"></i>
+          <div>
+            <span>Ce que l’IA a compris</span>
+            <p>{{ profileSummary }}</p>
+          </div>
+        </div>
+
+        <div class="draft-empty" *ngIf="!selectedGifts.length">
+          <div class="draft-empty__illustration" aria-hidden="true">
+            <i class="bi bi-gift"></i>
+            <span><i class="bi bi-plus"></i></span>
+          </div>
+          <h3>Votre liste se construit ici</h3>
+          <p>Ajoutez les idées qui vous plaisent au fil de la conversation.</p>
+        </div>
+
+        <ol class="draft-gifts" *ngIf="selectedGifts.length">
+          <li *ngFor="let gift of selectedGifts; let giftIndex = index; trackBy: trackGift">
+            <span class="draft-gift__number">{{ (giftIndex + 1).toString().padStart(2, '0') }}</span>
+            <div class="draft-gift__copy">
+              <strong>{{ gift.name }}</strong>
+              <small>{{ gift.budgetLabel || gift.description }}</small>
+              <button type="button" (click)="refineGift(gift)">
+                <i class="bi bi-chat-left-text" aria-hidden="true"></i> Affiner avec l’IA
+              </button>
+            </div>
+            <button
+              type="button"
+              class="draft-gift__remove"
+              (click)="removeGift(giftIndex)"
+              [attr.aria-label]="'Retirer ' + gift.name">
+              <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+          </li>
+        </ol>
+
+        <footer class="draft-list__footer">
+          <button
+            type="button"
+            class="share-button"
+            [disabled]="!selectedGifts.length"
+            (click)="shareDraft()">
+            <i class="bi bi-send" aria-hidden="true"></i>
+            {{ shareLabel }}
+          </button>
+          <p *ngIf="selectedGifts.length < 3">Ajoutez encore quelques idées avant de partager.</p>
+          <p *ngIf="selectedGifts.length >= 3">Belle base ! Vous pouvez continuer à l’affiner.</p>
+        </footer>
+      </aside>
+    </div>
+  </ng-template>
+</section>

@@ -1,36 +1,30 @@
 <header class="site-header">
   <div class="site-header__inner">
-    <a class="brand" href="#" aria-label="Retour en haut de la liste">
+    <a class="brand" href="/" aria-label="Gift Finder, accueil">
       <span class="brand__mark"><i class="bi bi-gift" aria-hidden="true"></i></span>
       <span class="brand__copy">
-        <small>Carnet d’anniversaire</small>
-        <strong>La liste d’envies</strong>
+        <strong>Gift Finder</strong>
+        <small>Le cadeau qui tombe juste</small>
       </span>
     </a>
 
     <div class="site-header__actions">
+      <button type="button" class="new-list-button" (click)="startNewList()">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        <span>Nouvelle liste</span>
+      </button>
       <app-theme-toggle></app-theme-toggle>
-      <button *ngIf="!isAuthenticated" type="button" class="admin-button" aria-label="Ouvrir l’administration" (click)="showLoginModal()">
-        <i class="bi bi-lock" aria-hidden="true"></i>
-        <span>Administration</span>
-      </button>
-      <button *ngIf="isAuthenticated" type="button" class="admin-button admin-button--active" aria-label="Quitter le mode édition" (click)="logout()">
-        <span class="admin-dot"></span>
-        <span>Quitter l’édition</span>
-      </button>
     </div>
   </div>
 </header>
 
-<app-login-modal *ngIf="showModal" (modalClosed)="onModalClosed()"></app-login-modal>
-
 <main>
-  <app-gift-list></app-gift-list>
+  <app-gift-planner></app-gift-planner>
 </main>
 
 <footer class="site-footer">
   <div class="site-footer__inner">
-    <p>Des idées choisies, pour un cadeau qui tombe juste.</p>
+    <p>Des idées personnelles, trouvées ensemble.</p>
     <app-version-display></app-version-display>
   </div>
 </footer>
