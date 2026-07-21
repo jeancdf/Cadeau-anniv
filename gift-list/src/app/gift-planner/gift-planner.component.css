@@ -288,17 +288,22 @@
 .workspace {
   width: min(1440px, 100%);
   height: calc(100vh - 77px);
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
   margin: 0 auto;
   background: var(--surface);
+  overflow: hidden;
 }
 
 .conversation {
+  height: 100%;
   min-width: 0;
+  min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   border-right: 1px solid var(--line);
+  overflow: hidden;
 }
 
 .conversation__header {
@@ -387,10 +392,14 @@
 }
 
 .messages {
+  height: 100%;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 1.5rem clamp(1rem, 4vw, 3.5rem) 2rem;
   scroll-behavior: smooth;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .conversation-day {
@@ -938,12 +947,17 @@
   .workspace {
     height: auto;
     min-height: calc(100vh - 68px);
+    min-height: calc(100dvh - 68px);
     display: block;
+    overflow: hidden;
   }
 
   .conversation {
     height: calc(100vh - 68px);
+    height: calc(100dvh - 68px);
+    min-height: 0;
     border-right: 0;
+    overflow: hidden;
   }
 
   .draft-list {
