@@ -13,8 +13,13 @@ if [[ ! -r "$CADDY_COMPOSE_FILE" || ! -w "$CADDY_COMPOSE_FILE" ]]; then
 fi
 
 reload_caddy() {
-  docker compose -f "$CADDY_COMPOSE_FILE" up -d --no-deps caddy
+  docker compose -f "$CADDY_COMPOSE_FILE" up -d --no-deps --force-recreate caddy
   docker exec "$CADDY_CONTAINER" caddy validate --config /etc/caddy/Caddyfile
+
+  if ! docker exec "$CADDY_CONTAINER" grep -Fq "$PUBLIC_DOMAIN" /etc/caddy/Caddyfile; then
+    echo "La route Caddy n'a pas été chargée dans le conteneur: $PUBLIC_DOMAIN" >&2
+    return 1
+  fi
 }
 
 if grep -Fq "$PUBLIC_DOMAIN" "$CADDY_COMPOSE_FILE"; then
