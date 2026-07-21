@@ -1,578 +1,545 @@
-<div class="container-fluid py-4">
-  <div class="row">
-    <!-- Panneau latéral (Formulaire et IA) -->
-    <div class="col-lg-4 mb-4" *ngIf="isAuthenticated">
-      <!-- Carte du formulaire -->
-      <div class="card shadow-lg mb-4 animate-fade-in">
-        <div class="card-header">
-          <h4 class="mb-0">{{ editMode ? 'Modifier' : 'Nouveau' }} cadeau souhaité</h4>
-        </div>
-        <div class="card-body">
-          <form [formGroup]="giftForm" (ngSubmit)="onSubmit()">
-            <div class="mb-3">
-              <label for="name" class="form-label">Nom du cadeau</label>
-              <input type="text" class="form-control" id="name" formControlName="name" placeholder="Que souhaitez-vous recevoir?">
-              <div class="text-danger small mt-1" *ngIf="giftForm.get('name')?.invalid && giftForm.get('name')?.touched">
-                Ce champ est requis
-              </div>
-            </div>
-            
-            <div class="mb-3">
-              <label for="description" class="form-label">Description</label>
-              <textarea class="form-control" id="description" formControlName="description" rows="2" placeholder="Détails du cadeau"></textarea>
-            </div>
-            
-            <div class="mb-3">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <label class="form-label mb-0">Options de prix</label>
-                <button type="button" class="btn btn-sm btn-primary" (click)="addPricePoint()">
-                  <i class="bi bi-plus-circle"></i> Ajouter
-                </button>
-              </div>
-              
-              <div formArrayName="pricePoints" class="animate-fade-in">
-                <div *ngFor="let pricePoint of pricePointsArray.controls; let i = index" [formGroupName]="i" class="card mb-2 border border-light">
-                  <div class="card-body p-3">
-                    <div class="row g-2">
-                      <div class="col-md-3">
-                        <input type="text" class="form-control form-control-sm" formControlName="label" placeholder="Label">
-                      </div>
-                      <div class="col-md-3">
-                        <div class="input-group input-group-sm">
-                          <input type="number" class="form-control" formControlName="price" min="0">
-                          <span class="input-group-text">€</span>
-                        </div>
-                      </div>
-                      <div class="col-md-5">
-                        <input type="url" class="form-control form-control-sm" formControlName="link" placeholder="https://...">
-                      </div>
-                      <div class="col-md-1 d-flex align-items-center justify-content-end">
-                        <button type="button" class="btn btn-sm btn-outline-danger" (click)="removePricePoint(i)">
-                          <i class="bi bi-x-lg"></i>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div *ngIf="pricePointsArray.length === 0" class="text-center p-3 rounded bg-light">
-                <p class="mb-0 text-muted small">Ajoutez des options de prix</p>
-              </div>
-            </div>
-            
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-primary" [disabled]="giftForm.invalid">
-                <i class="bi" [ngClass]="editMode ? 'bi-save' : 'bi-plus-lg'"></i>
-                {{ editMode ? 'Mettre à jour' : 'Ajouter à ma liste de souhaits' }}
-              </button>
-              <button type="button" class="btn btn-outline-secondary btn-sm" (click)="resetForm()" *ngIf="editMode">
-                <i class="bi bi-arrow-left"></i> Annuler
-              </button>
-            </div>
-          </form>
-        </div>
+<div class="wishlist-page">
+  <section class="wishlist-hero" aria-labelledby="wishlist-title">
+    <div class="wishlist-hero__copy">
+      <p class="eyebrow"><span></span> Une sélection pensée avec soin</p>
+      <h1 id="wishlist-title">Des envies,<br><em>pas des devinettes.</em></h1>
+      <p class="wishlist-hero__intro">
+        Quelques objets et expériences qui me feraient vraiment plaisir,
+        avec plusieurs options pour que le geste compte plus que le budget.
+      </p>
+      <div class="wishlist-hero__actions">
+        <a class="button button--ink" href="#les-envies">
+          Découvrir la sélection
+          <i class="bi bi-arrow-down-right" aria-hidden="true"></i>
+        </a>
+        <button type="button" class="button button--ghost" (click)="shareList()">
+          <i class="bi bi-send" aria-hidden="true"></i>
+          {{ shareLabel }}
+        </button>
+      </div>
+    </div>
+
+    <div class="wishlist-hero__note" aria-label="Résumé de la liste">
+      <div class="note-tape" aria-hidden="true"></div>
+      <p class="note-label">Le petit mémo</p>
+      <div class="note-stat">
+        <strong>{{ gifts.length }}</strong>
+        <span>envie{{ gifts.length > 1 ? 's' : '' }} choisie{{ gifts.length > 1 ? 's' : '' }}</span>
+      </div>
+      <div class="note-rule"></div>
+      <div class="note-stat note-stat--small">
+        <strong>{{ totalOptions }}</strong>
+        <span>façon{{ totalOptions > 1 ? 's' : '' }} de faire plaisir</span>
+      </div>
+      <p class="note-foot">La priorité est indiquée par le numéro de chaque carte.</p>
+    </div>
+  </section>
+
+  <div class="feedback feedback--error" *ngIf="actionError" role="alert">
+    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+    <span>{{ actionError }}</span>
+    <button type="button" aria-label="Fermer le message" (click)="actionError = ''">
+      <i class="bi bi-x-lg" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <div class="feedback feedback--success" *ngIf="successMessage" role="status">
+    <i class="bi bi-check-circle" aria-hidden="true"></i>
+    <span>{{ successMessage }}</span>
+  </div>
+
+  <section class="admin-studio" *ngIf="isAuthenticated" #editorPanel aria-labelledby="studio-title">
+    <header class="admin-studio__header">
+      <div>
+        <p class="section-kicker">Espace privé</p>
+        <h2 id="studio-title">Atelier de la liste</h2>
+      </div>
+      <span class="status-pill"><span></span> Mode édition</span>
+    </header>
+
+    <div class="studio-tabs" role="tablist" aria-label="Outils d’édition">
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="adminPanel === 'gift'"
+        [class.is-active]="adminPanel === 'gift'"
+        (click)="selectAdminPanel('gift')">
+        <span>01</span> Cadeau
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="adminPanel === 'import'"
+        [class.is-active]="adminPanel === 'import'"
+        (click)="selectAdminPanel('import')">
+        <span>02</span> Importer
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="adminPanel === 'ai'"
+        [class.is-active]="adminPanel === 'ai'"
+        (click)="selectAdminPanel('ai')">
+        <span>03</span> Idées IA
+      </button>
+    </div>
+
+    <div class="studio-panel" *ngIf="adminPanel === 'gift'" role="tabpanel">
+      <div class="studio-panel__intro">
+        <p class="section-kicker">{{ editMode ? 'Mise à jour' : 'Nouvelle envie' }}</p>
+        <h3>{{ editMode ? 'Affiner ce cadeau' : 'Ajouter une idée à la sélection' }}</h3>
+        <p>Un nom clair, une note personnelle et au moins une option suffisent.</p>
       </div>
 
-      <!-- Carte Importer Liste -->
-      <div class="card shadow-lg mb-4 animate-slide-up">
-        <div class="card-header bg-success text-white">
-          <h4 class="mb-0"><i class="bi bi-cloud-upload me-2"></i>Importer ma liste de souhaits</h4>
+      <form class="gift-form" [formGroup]="giftForm" (ngSubmit)="onSubmit()" novalidate>
+        <div class="field field--wide">
+          <label for="gift-name">Nom du cadeau <span>Requis</span></label>
+          <input
+            id="gift-name"
+            type="text"
+            formControlName="name"
+            placeholder="Ex. Un beau livre de cuisine"
+            [class.is-invalid]="giftForm.get('name')?.invalid && giftForm.get('name')?.touched">
+          <small *ngIf="giftForm.get('name')?.invalid && giftForm.get('name')?.touched">
+            Donnez un nom à cette envie.
+          </small>
         </div>
-        <div class="card-body">
-          <p class="small text-muted mb-3">Collez votre liste de cadeaux souhaités pour l'importer directement</p>
-          <div class="mb-3">
-            <textarea 
-              class="form-control" 
-              rows="4" 
-              [(ngModel)]="existingListText" 
-              placeholder="Collez votre liste ici..."
-            ></textarea>
+
+        <div class="field field--wide">
+          <label for="gift-description">Pourquoi ce choix ? <span>Optionnel</span></label>
+          <textarea
+            id="gift-description"
+            formControlName="description"
+            rows="3"
+            placeholder="Une taille, une couleur, un détail utile…"></textarea>
+        </div>
+
+        <div class="options-editor field--wide" formArrayName="pricePoints">
+          <div class="options-editor__heading">
+            <div>
+              <span class="field-label">Options d’achat</span>
+              <small>Du plus accessible au plus généreux.</small>
+            </div>
+            <button type="button" class="text-button" (click)="addPricePoint()">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i> Ajouter une option
+            </button>
           </div>
-          <div class="d-grid">
-            <button 
-              class="btn btn-success" 
-              [disabled]="!existingListText.trim() || isImportingList"
-              (click)="importExistingList()"
-            >
-              <span *ngIf="isImportingList" class="spinner-border spinner-border-sm me-1"></span>
-              <i *ngIf="!isImportingList" class="bi bi-upload me-1"></i>
-              Importer la liste
+
+          <div
+            class="option-editor"
+            *ngFor="let pricePoint of pricePointsArray.controls; let optionIndex = index"
+            [formGroupName]="optionIndex">
+            <span class="option-editor__number">{{ (optionIndex + 1).toString().padStart(2, '0') }}</span>
+            <div class="field">
+              <label [for]="'option-label-' + optionIndex">Libellé</label>
+              <input [id]="'option-label-' + optionIndex" type="text" formControlName="label" placeholder="Standard">
+            </div>
+            <div class="field field--price">
+              <label [for]="'option-price-' + optionIndex">Prix</label>
+              <div class="price-input">
+                <input [id]="'option-price-' + optionIndex" type="number" min="0" formControlName="price" placeholder="50">
+                <span>€</span>
+              </div>
+            </div>
+            <div class="field option-editor__link">
+              <label [for]="'option-link-' + optionIndex">Lien</label>
+              <input [id]="'option-link-' + optionIndex" type="text" formControlName="link" placeholder="https://…">
+            </div>
+            <button
+              type="button"
+              class="icon-button icon-button--danger"
+              (click)="removePricePoint(optionIndex)"
+              [attr.aria-label]="'Supprimer l’option ' + (optionIndex + 1)">
+              <i class="bi bi-trash3" aria-hidden="true"></i>
             </button>
           </div>
         </div>
-      </div>
 
-      <!-- Carte IA -->
-      <div class="card shadow-lg animate-slide-up">
-        <div class="card-header bg-primary text-white">
-          <h4 class="mb-0"><i class="bi bi-robot me-2"></i>Suggestions IA</h4>
-        </div>
-        <div class="card-body">
-          <div class="mb-3">
-            <label for="aiPrompt" class="form-label">Que souhaiteriez-vous recevoir?</label>
-            <div class="input-group">
-              <input type="text" class="form-control" id="aiPrompt" [(ngModel)]="aiPrompt" 
-                placeholder="Ex: Idée de cadeau pour un fan de musique...">
-              <button class="btn btn-primary" (click)="generateAiSuggestions()" [disabled]="!aiPrompt.trim() || isLoadingAi">
-                <span *ngIf="isLoadingAi" class="spinner-border spinner-border-sm me-1"></span>
-                <i *ngIf="!isLoadingAi" class="bi bi-magic"></i>
-                Générer
-              </button>
-            </div>
-          </div>
-
-          <!-- AI Preferences -->
-          <div class="card mb-3 bg-light">
-            <div class="card-body">
-              <h6 class="mb-2"><i class="bi bi-sliders me-1"></i> Préférences pour l'IA</h6>
-              
-              <!-- Selected Category Badge (if any) -->
-              <div *ngIf="selectedCategory" class="mb-3">
-                <div class="d-flex justify-content-between align-items-center">
-                  <label class="form-label mb-0">Catégorie explorée:</label>
-                  <button class="btn btn-sm btn-outline-secondary" (click)="resetCategorySelection()">
-                    <i class="bi bi-x"></i> Réinitialiser
-                  </button>
-                </div>
-                <div class="mt-2">
-                  <span class="badge bg-success p-2">
-                    <i class="bi bi-tag me-1"></i> {{ selectedCategory }}
-                  </span>
-                </div>
-              </div>
-              
-              <!-- Price Range -->
-              <div class="mb-3">
-                <label class="form-label d-flex justify-content-between">
-                  <span>Fourchette de prix:</span>
-                  <span class="text-primary">{{ aiMinPrice }}€ - {{ aiMaxPrice }}€</span>
-                </label>
-                <div class="d-flex gap-2">
-                  <input type="range" class="form-range" min="0" max="100" step="5" 
-                    [(ngModel)]="aiMinPrice" name="minPrice">
-                  <input type="range" class="form-range" min="0" max="1000" step="50" 
-                    [(ngModel)]="aiMaxPrice" name="maxPrice">
-                </div>
-              </div>
-              
-              <!-- Preferences -->
-              <div class="mb-2">
-                <label class="form-label">Préférences:</label>
-                <textarea 
-                  class="form-control form-control-sm" 
-                  rows="2" 
-                  placeholder="J'aime les choses créatives et originales. J'évite les objets trop volumineux."
-                  [(ngModel)]="aiPreferences"
-                  name="aiPreferences"
-                ></textarea>
-              </div>
-              
-              <!-- Dislikes -->
-              <div>
-                <label class="form-label">Ce que je n'aime pas:</label>
-                <textarea 
-                  class="form-control form-control-sm" 
-                  rows="2" 
-                  placeholder="Je n'aime pas les vêtements, les parfums, ou les objets fragiles."
-                  [(ngModel)]="aiDislikes"
-                  name="aiDislikes"
-                ></textarea>
-              </div>
-            </div>
-          </div>
-
-          <div *ngIf="isLoadingAi" class="text-center py-4">
-            <div class="spinner-border text-primary"></div>
-            <p class="mt-2">Recherche d'idées...</p>
-          </div>
-
-          <!-- AI Reasoning Section - More concise with see more toggle -->
-          <div *ngIf="showAiReasoning && !isLoadingAi" class="card border-primary mb-4 animate-fade-in">
-            <div class="card-header bg-primary text-white">
-              <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-braces me-2"></i>Analyse de l'IA</h5>
-                <button type="button" class="btn btn-sm btn-outline-light" (click)="showAiReasoning = !showAiReasoning">
-                  <i class="bi" [ngClass]="showAiReasoning ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
-                </button>
-              </div>
-            </div>
-            <div class="card-body">
-              <!-- Short analysis summary -->
-              <p class="mb-2" *ngIf="aiAnalysisIntro">
-                {{ aiAnalysisIntro.length > 120 ? (aiAnalysisIntro | slice:0:120) + '...' : aiAnalysisIntro }}
-                <button *ngIf="aiAnalysisIntro.length > 120" (click)="toggleFullAnalysis()" class="btn btn-link btn-sm p-0">
-                  {{ showFullAnalysis ? 'Voir moins' : 'Voir plus' }}
-                </button>
-              </p>
-              
-              <!-- Full analysis when expanded -->
-              <div *ngIf="showFullAnalysis" class="mt-3 animate-fade-in">
-                <div class="reasoning-section mb-3" *ngIf="aiAnalysisMethod">
-                  <h6 class="text-primary mb-2"><i class="bi bi-search me-1"></i>Méthode de sélection</h6>
-                  <p class="reasoning-text">{{ aiAnalysisMethod }}</p>
-                </div>
-              </div>
-              
-              <!-- Always show interests -->
-              <div class="reasoning-section" *ngIf="aiIdentifiedInterests && aiIdentifiedInterests.length > 0">
-                <h6 class="text-primary mb-2"><i class="bi bi-bookmark-heart me-1"></i>Centres d'intérêt identifiés</h6>
-                <div class="interest-tags">
-                  <span *ngFor="let interest of aiIdentifiedInterests" class="badge bg-info text-white me-2 mb-2">
-                    {{ interest }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Category Suggestions Section - More concise -->
-          <div *ngIf="showCategorySuggestions && !isLoadingAi" class="mt-4 animate-fade-in">
-            <div class="card border-info mb-4">
-              <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-compass me-2"></i>Catégories à explorer</h5>
-                <button *ngIf="!isLoadingSuggestions" class="btn btn-sm btn-outline-light" (click)="loadCategorySuggestions()">
-                  <i class="bi bi-arrow-repeat"></i>
-                </button>
-              </div>
-              <div class="card-body">
-                <!-- Loading state -->
-                <div *ngIf="isLoadingSuggestions" class="text-center py-3">
-                  <div class="spinner-border spinner-border-sm text-info"></div>
-                  <p class="mt-2 small">Analyse de vos préférences...</p>
-                </div>
-                
-                <!-- Categories display - More concise -->
-                <div *ngIf="!isLoadingSuggestions && suggestedCategories.length > 0" class="row">
-                  <div *ngFor="let category of suggestedCategories" class="col-md-6 mb-3">
-                    <div class="card h-100 category-card border-info">
-                      <div class="card-body">
-                        <h6 class="card-title text-info">{{ category.name }}</h6>
-                        
-                        <div class="category-examples mt-2 mb-2">
-                          <ul class="small ps-3 mb-0">
-                            <li *ngFor="let example of category.examples.slice(0, 2)">{{ example }}</li>
-                          </ul>
-                        </div>
-                        
-                        <button class="btn btn-sm btn-info w-100" (click)="selectCategory(category.name)">
-                          <i class="bi bi-search me-1"></i> Explorer
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- AI Suggestions - More concise -->
-          <div *ngIf="aiSuggestions.length > 0" class="mt-4 animate-fade-in">
-            <h5 class="mb-3 border-bottom pb-2">
-              <i class="bi bi-lightbulb me-2"></i>
-              {{ selectedCategory ? 'Idées: ' + selectedCategory : 'Idées proposées' }}
-            </h5>
-            
-            <div class="suggestion-cards">
-              <div *ngFor="let suggestion of aiSuggestions; let i = index" class="suggestion-card mb-3 animate-slide-up">
-                <div class="card border-0 shadow-sm">
-                  <div class="card-body">
-                    <h5 class="card-title text-primary">{{ suggestion.name }}</h5>
-                    <p class="card-text small">
-                      {{ suggestion.description.length > 100 ? (suggestion.description | slice:0:100) + '...' : suggestion.description }}
-                      <button *ngIf="suggestion.description.length > 100 || suggestion.reasoning" 
-                              (click)="toggleSuggestionDetails(i)" 
-                              class="btn btn-link btn-sm p-0">
-                        {{ expandedSuggestions[i] ? 'Voir moins' : 'Voir plus' }}
-                      </button>
-                    </p>
-                    
-                    <!-- Detailed reasoning - collapsed by default -->
-                    <div *ngIf="expandedSuggestions[i] && suggestion.reasoning" class="reasoning-box mb-3 p-2 border-left-primary rounded bg-light animate-fade-in">
-                      <p class="mb-0 small text-muted">{{ suggestion.reasoning }}</p>
-                    </div>
-                    
-                    <div class="price-options mt-3">
-                      <div *ngFor="let point of suggestion.pricePoints" class="price-option mb-2">
-                        <span class="badge bg-light text-dark me-2">{{ point.label }}</span>
-                        <span class="badge bg-primary me-2">{{ point.price }} €</span>
-                        <a [href]="point.link" target="_blank" class="small link-primary">
-                          <i class="bi bi-link-45deg"></i> Voir
-                        </a>
-                      </div>
-                    </div>
-                    
-                    <button class="btn btn-success btn-sm mt-2 w-100" (click)="addAiSuggestion(suggestion)">
-                      <i class="bi bi-plus-circle"></i> Ajouter à ma liste
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Liste des cadeaux - full width when not authenticated -->
-    <div class="col-lg-{{ isAuthenticated ? '8' : '12' }}">
-      <div class="card shadow-lg animate-fade-in">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h4 class="mb-0"><i class="bi bi-gift me-2"></i>Ma liste de souhaits (cadeaux que je voudrais recevoir)</h4>
-          <button class="btn btn-success" (click)="exportList()" *ngIf="isAuthenticated">
-            <i class="bi bi-download"></i> Exporter
+        <div class="form-actions field--wide">
+          <button type="submit" class="button button--accent" [disabled]="isSaving">
+            <span class="button-spinner" *ngIf="isSaving" aria-hidden="true"></span>
+            <i class="bi" [ngClass]="editMode ? 'bi-check2' : 'bi-plus-lg'" *ngIf="!isSaving" aria-hidden="true"></i>
+            {{ isSaving ? 'Enregistrement…' : (editMode ? 'Enregistrer les changements' : 'Ajouter à la liste') }}
+          </button>
+          <button type="button" class="button button--ghost" *ngIf="editMode" (click)="resetForm()">
+            Annuler
           </button>
         </div>
-        <div class="card-body">
-          <!-- Loading spinner -->
-          <div *ngIf="isLoading" class="text-center py-5">
-            <div class="spinner-border text-primary"></div>
-            <p class="mt-2">Chargement de votre liste...</p>
-          </div>
-          
-          <!-- Empty state -->
-          <div *ngIf="!isLoading && gifts.length === 0" class="text-center py-5 animate-fade-in">
-            <div class="empty-state">
-              <i class="bi bi-inbox display-1 text-muted"></i>
-              <h5 class="mt-3">Votre liste de souhaits est vide</h5>
-              <p class="text-muted">Ajoutez des cadeaux que vous aimeriez recevoir ou utilisez l'IA pour obtenir des suggestions</p>
+      </form>
+    </div>
+
+    <div class="studio-panel studio-panel--compact" *ngIf="adminPanel === 'import'" role="tabpanel">
+      <div class="studio-panel__intro">
+        <p class="section-kicker">Import intelligent</p>
+        <h3>Transformer une liste brute</h3>
+        <p>Collez du texte, des prix et des liens. L’IA les rangera en cadeaux et options.</p>
+      </div>
+      <div class="import-editor">
+        <label for="existing-list">Liste à importer</label>
+        <textarea
+          id="existing-list"
+          rows="8"
+          [(ngModel)]="existingListText"
+          placeholder="Casque audio — 120 € — https://…&#10;Livre photo — environ 35 €"></textarea>
+        <button
+          type="button"
+          class="button button--accent"
+          [disabled]="!existingListText.trim() || isImportingList"
+          (click)="importExistingList()">
+          <span class="button-spinner" *ngIf="isImportingList" aria-hidden="true"></span>
+          <i class="bi bi-stars" *ngIf="!isImportingList" aria-hidden="true"></i>
+          {{ isImportingList ? 'Analyse en cours…' : 'Analyser et importer' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="studio-panel studio-panel--ai" *ngIf="adminPanel === 'ai'" role="tabpanel">
+      <div class="studio-panel__intro">
+        <p class="section-kicker">Inspiration assistée</p>
+        <h3>Ouvrir une nouvelle piste</h3>
+        <p>Décrivez une envie ou un univers. Les idées restent à valider avant ajout.</p>
+      </div>
+
+      <div class="ai-composer">
+        <div class="field field--wide">
+          <label for="ai-prompt">Ce que vous cherchez</label>
+          <textarea
+            id="ai-prompt"
+            rows="3"
+            [(ngModel)]="aiPrompt"
+            placeholder="Une idée durable pour quelqu’un qui aime cuisiner et recevoir…"></textarea>
+        </div>
+        <div class="ai-budget">
+          <div class="field">
+            <label for="ai-min-price">Budget minimum</label>
+            <div class="price-input">
+              <input id="ai-min-price" type="number" min="0" [(ngModel)]="aiMinPrice">
+              <span>€</span>
             </div>
           </div>
-          
-          <!-- Gift list with drag & drop -->
-          <div cdkDropList (cdkDropListDropped)="drop($event)" *ngIf="!isLoading && gifts.length > 0">
-            <!-- Helper text -->
-            <div class="alert alert-info mb-4 animate-fade-in" *ngIf="isAuthenticated">
-              <i class="bi bi-info-circle me-2"></i> Glissez-déposez pour réorganiser les priorités
-            </div>
-            
-            <!-- Gift cards -->
-            <div class="row" cdkDropListOrientation="horizontal">
-              <div *ngFor="let gift of gifts; let i = index" class="col-md-6 mb-4 animate-slide-up" cdkDrag [cdkDragDisabled]="!isAuthenticated">
-                <div class="card h-100 gift-card">
-                  <!-- Ranking badge -->
-                  <div class="ranking-badge">
-                    #{{ i + 1 }}
-                  </div>
-                  
-                  <!-- Ranking control buttons (only for authenticated users) -->
-                  <div *ngIf="isAuthenticated" class="ranking-controls">
-                    <div class="btn-group-vertical btn-group-sm">
-                      <button 
-                        class="btn btn-sm btn-light" 
-                        [disabled]="i === 0" 
-                        (click)="moveGiftPosition(gift, i, 'up')"
-                        title="Monter dans la liste">
-                        <i class="bi bi-arrow-up"></i>
-                      </button>
-                      <button 
-                        class="btn btn-sm btn-light" 
-                        [disabled]="i === gifts.length - 1" 
-                        (click)="moveGiftPosition(gift, i, 'down')"
-                        title="Descendre dans la liste">
-                        <i class="bi bi-arrow-down"></i>
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <!-- Handle for drag -->
-                  <div class="drag-handle position-absolute top-0 end-0 mt-2 me-2" cdkDragHandle *ngIf="isAuthenticated">
-                    <i class="bi bi-grip-vertical"></i>
-                  </div>
-                  
-                  <div class="card-header">
-                    <h5 class="mb-0">{{ gift.name }}</h5>
-                  </div>
-                  
-                  <div class="card-body">
-                    <p class="card-text" *ngIf="gift.description">{{ gift.description }}</p>
-                    
-                    <div class="price-points mt-3">
-                      <h6 class="text-muted mb-2 small"><i class="bi bi-tag me-1"></i>OPTIONS</h6>
-                      <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                          <thead>
-                            <tr>
-                              <th>Option</th>
-                              <th class="text-end">Prix</th>
-                              <th class="text-center">Lien</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr *ngFor="let point of gift.pricePoints">
-                              <td>{{ point.label }}</td>
-                              <td class="text-end">
-                                <span class="badge bg-primary">{{ point.price }} €</span>
-                                <!-- Add cheaper alternatives button for expensive items -->
-                                <button *ngIf="point.price > 100 && isAuthenticated" class="btn btn-sm btn-outline-warning ms-2" (click)="findCheaperAlternatives(gift, point)" title="Trouver des options moins chères">
-                                  <i class="bi bi-currency-euro"></i> Options -
-                                </button>
-                              </td>
-                              <td class="text-center">
-                                <a [href]="point.link" target="_blank" class="btn btn-sm btn-light me-1">
-                                  <i class="bi bi-box-arrow-up-right"></i>
-                                </a>
-                                <button *ngIf="isAuthenticated" class="btn btn-sm btn-outline-info" (click)="findAlternativeLink(gift.name, point)" title="Trouver un lien alternatif">
-                                  <i class="bi bi-search"></i>
-                                </button>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="card-footer bg-transparent d-flex justify-content-between" *ngIf="isAuthenticated">
-                    <button class="btn btn-sm btn-outline-primary" (click)="editGift(gift)">
-                      <i class="bi bi-pencil me-1"></i> Modifier
-                    </button>
-                    <button class="btn btn-sm btn-danger text-white" (click)="deleteGift(gift.id)">
-                      <i class="bi bi-trash me-1"></i> Supprimer
-                    </button>
-                  </div>
-                </div>
-              </div>
+          <span>à</span>
+          <div class="field">
+            <label for="ai-max-price">Budget maximum</label>
+            <div class="price-input">
+              <input id="ai-max-price" type="number" min="0" [(ngModel)]="aiMaxPrice">
+              <span>€</span>
             </div>
           </div>
         </div>
+        <details class="ai-details">
+          <summary>Ajouter des préférences</summary>
+          <div class="ai-details__grid">
+            <div class="field">
+              <label for="ai-likes">J’aime</label>
+              <textarea id="ai-likes" rows="2" [(ngModel)]="aiPreferences" placeholder="Créatif, local, durable…"></textarea>
+            </div>
+            <div class="field">
+              <label for="ai-dislikes">À éviter</label>
+              <textarea id="ai-dislikes" rows="2" [(ngModel)]="aiDislikes" placeholder="Encombrant, fragile…"></textarea>
+            </div>
+          </div>
+        </details>
+        <div class="selected-category" *ngIf="selectedCategory">
+          <span>Catégorie : {{ selectedCategory }}</span>
+          <button type="button" (click)="resetCategorySelection()" aria-label="Retirer la catégorie">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
+        </div>
+        <button
+          type="button"
+          class="button button--accent"
+          [disabled]="!aiPrompt.trim() || isLoadingAi"
+          (click)="generateAiSuggestions()">
+          <span class="button-spinner" *ngIf="isLoadingAi" aria-hidden="true"></span>
+          <i class="bi bi-stars" *ngIf="!isLoadingAi" aria-hidden="true"></i>
+          {{ isLoadingAi ? 'Recherche d’idées…' : 'Proposer des idées' }}
+        </button>
+      </div>
+
+      <div class="ai-results" *ngIf="showAiReasoning || aiSuggestions.length || showCategorySuggestions">
+        <div class="ai-analysis" *ngIf="showAiReasoning && !isLoadingAi">
+          <div>
+            <p class="section-kicker">Lecture de la demande</p>
+            <p>{{ showFullAnalysis ? aiAnalysisIntro : (aiAnalysisIntro | slice:0:180) }}</p>
+            <p *ngIf="showFullAnalysis && aiAnalysisMethod" class="ai-analysis__method">{{ aiAnalysisMethod }}</p>
+          </div>
+          <button type="button" class="text-button" *ngIf="aiAnalysisIntro.length > 180 || aiAnalysisMethod" (click)="toggleFullAnalysis()">
+            {{ showFullAnalysis ? 'Réduire' : 'Lire l’analyse' }}
+          </button>
+          <div class="tag-list" *ngIf="aiIdentifiedInterests.length">
+            <span *ngFor="let interest of aiIdentifiedInterests">{{ interest }}</span>
+          </div>
+        </div>
+
+        <div class="category-explorer" *ngIf="showCategorySuggestions && !isLoadingAi">
+          <div class="result-section-heading">
+            <div>
+              <p class="section-kicker">Pistes voisines</p>
+              <h4>Catégories à explorer</h4>
+            </div>
+            <button type="button" class="icon-button" (click)="loadCategorySuggestions()" [disabled]="isLoadingSuggestions" aria-label="Actualiser les catégories">
+              <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="inline-loading" *ngIf="isLoadingSuggestions"><span class="button-spinner"></span> Analyse des préférences…</div>
+          <div class="category-grid" *ngIf="!isLoadingSuggestions">
+            <button type="button" *ngFor="let category of suggestedCategories" (click)="selectCategory(category.name)">
+              <strong>{{ category.name }}</strong>
+              <span>{{ (category.examples || []).slice(0, 2).join(' · ') }}</span>
+              <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="suggestion-grid" *ngIf="aiSuggestions.length">
+          <article class="suggestion-card" *ngFor="let suggestion of aiSuggestions; let suggestionIndex = index">
+            <p class="suggestion-card__number">Suggestion {{ suggestionIndex + 1 }}</p>
+            <h4>{{ suggestion.name }}</h4>
+            <p>{{ expandedSuggestions[suggestionIndex] ? (suggestion.description || '') : ((suggestion.description || '') | slice:0:120) }}</p>
+            <p class="suggestion-card__reason" *ngIf="expandedSuggestions[suggestionIndex] && suggestion.reasoning">{{ suggestion.reasoning }}</p>
+            <button
+              type="button"
+              class="text-button"
+              *ngIf="(suggestion.description || '').length > 120 || suggestion.reasoning"
+              (click)="toggleSuggestionDetails(suggestionIndex)">
+              {{ expandedSuggestions[suggestionIndex] ? 'Voir moins' : 'Voir le détail' }}
+            </button>
+            <div class="suggestion-options">
+              <span *ngFor="let point of (suggestion.pricePoints || [])">{{ point.label }} · {{ point.price }} €</span>
+            </div>
+            <button type="button" class="button button--small button--ink" (click)="addAiSuggestion(suggestion)">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i> Ajouter cette idée
+            </button>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wishlist-section" id="les-envies" aria-labelledby="gift-list-title">
+    <header class="wishlist-section__header">
+      <div>
+        <p class="section-kicker">La sélection</p>
+        <h2 id="gift-list-title">Les envies du moment</h2>
+      </div>
+      <div class="wishlist-section__meta">
+        <span>{{ filteredGifts.length }} sur {{ gifts.length }}</span>
+        <button type="button" class="text-button" *ngIf="isAuthenticated" (click)="exportList()">
+          <i class="bi bi-download" aria-hidden="true"></i> Exporter
+        </button>
+      </div>
+    </header>
+
+    <div class="browse-tools" *ngIf="gifts.length > 0">
+      <label class="search-field" for="gift-search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input id="gift-search" type="search" [(ngModel)]="searchQuery" placeholder="Rechercher une envie…">
+        <button type="button" *ngIf="searchQuery" (click)="searchQuery = ''" aria-label="Effacer la recherche">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </label>
+      <div class="filter-chips" aria-label="Filtrer par budget">
+        <button type="button" [class.is-active]="budgetFilter === 'all'" (click)="setBudgetFilter('all')">Tous</button>
+        <button type="button" [class.is-active]="budgetFilter === 'under-50'" (click)="setBudgetFilter('under-50')">Moins de 50 €</button>
+        <button type="button" [class.is-active]="budgetFilter === '50-100'" (click)="setBudgetFilter('50-100')">50–100 €</button>
+        <button type="button" [class.is-active]="budgetFilter === 'over-100'" (click)="setBudgetFilter('over-100')">Plus de 100 €</button>
+      </div>
+    </div>
+
+    <div class="load-error" *ngIf="loadError" role="alert">
+      <div>
+        <i class="bi bi-cloud-slash" aria-hidden="true"></i>
+        <div><strong>Impossible de charger la liste</strong><p>{{ loadError }}</p></div>
+      </div>
+      <button type="button" class="button button--ghost" (click)="loadGifts()">Réessayer</button>
+    </div>
+
+    <div class="skeleton-grid" *ngIf="isLoading && !gifts.length" aria-label="Chargement de la liste">
+      <div class="gift-skeleton" *ngFor="let item of [1, 2, 3, 4]">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="!isLoading && !loadError && gifts.length === 0">
+      <span class="empty-state__icon"><i class="bi bi-gift" aria-hidden="true"></i></span>
+      <p class="section-kicker">Page blanche</p>
+      <h3>La première envie reste à écrire.</h3>
+      <p>Cette liste accueillera bientôt des idées choisies, avec les bons liens et les bons budgets.</p>
+      <button type="button" class="button button--accent" *ngIf="!isAuthenticated" (click)="showLoginModal()">
+        <i class="bi bi-lock" aria-hidden="true"></i> Ouvrir l’atelier
+      </button>
+    </div>
+
+    <div class="empty-state empty-state--search" *ngIf="!isLoading && gifts.length > 0 && filteredGifts.length === 0">
+      <span class="empty-state__icon"><i class="bi bi-search" aria-hidden="true"></i></span>
+      <h3>Aucune envie ne correspond.</h3>
+      <p>Essayez un autre mot ou élargissez le budget.</p>
+      <button type="button" class="text-button" (click)="clearFilters()">Effacer les filtres</button>
+    </div>
+
+    <div class="reorder-note" *ngIf="isAuthenticated && gifts.length > 1 && !hasActiveFilters">
+      <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+      <span>{{ isReordering ? 'Enregistrement du nouvel ordre…' : 'Glissez les cartes ou utilisez les flèches pour changer les priorités.' }}</span>
+    </div>
+
+    <div
+      class="gift-grid"
+      cdkDropList
+      [cdkDropListData]="gifts"
+      [cdkDropListDisabled]="!isAuthenticated || hasActiveFilters || isReordering"
+      (cdkDropListDropped)="drop($event)"
+      *ngIf="!isLoading && filteredGifts.length > 0">
+      <article
+        class="gift-card"
+        *ngFor="let gift of filteredGifts; let giftIndex = index; trackBy: trackByGiftId"
+        cdkDrag
+        [cdkDragDisabled]="!isAuthenticated || hasActiveFilters || isReordering">
+        <div class="gift-card__drag-placeholder" *cdkDragPlaceholder></div>
+        <header class="gift-card__header">
+          <span class="gift-rank">{{ (gifts.indexOf(gift) + 1).toString().padStart(2, '0') }}</span>
+          <span class="gift-price-range">{{ getGiftPriceLabel(gift) }}</span>
+          <div class="gift-admin-actions" *ngIf="isAuthenticated">
+            <button
+              type="button"
+              class="icon-button"
+              cdkDragHandle
+              *ngIf="!hasActiveFilters"
+              aria-label="Déplacer le cadeau">
+              <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="icon-button" (click)="editGift(gift)" [attr.aria-label]="'Modifier ' + gift.name">
+              <i class="bi bi-pencil" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="icon-button icon-button--danger" (click)="deleteGift(gift.id)" [attr.aria-label]="'Supprimer ' + gift.name">
+              <i class="bi bi-trash3" aria-hidden="true"></i>
+            </button>
+          </div>
+        </header>
+
+        <div class="gift-card__body">
+          <h3>{{ gift.name }}</h3>
+          <p class="gift-description" *ngIf="gift.description">{{ gift.description }}</p>
+          <p class="gift-description gift-description--muted" *ngIf="!gift.description">Une envie simple, laissée volontairement sans consigne.</p>
+
+          <div class="gift-options" *ngIf="gift.pricePoints.length; else noOptions">
+            <div class="gift-option" *ngFor="let point of gift.pricePoints; let pointIndex = index">
+              <div class="gift-option__label">
+                <span>{{ (pointIndex + 1).toString().padStart(2, '0') }}</span>
+                <strong>{{ point.label }}</strong>
+              </div>
+              <span class="gift-option__price">{{ point.price | number:'1.0-2' }} €</span>
+              <ng-container *ngIf="safeGiftUrl(point.link) as giftUrl; else missingGiftLink">
+                <a class="offer-link" [href]="giftUrl" target="_blank" rel="noopener noreferrer">
+                  Voir l’offre <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                </a>
+              </ng-container>
+              <ng-template #missingGiftLink><span class="missing-link">Lien indisponible</span></ng-template>
+              <div class="gift-option__admin" *ngIf="isAuthenticated">
+                <button type="button" class="icon-button" (click)="findAlternativeLink(gift, point)" aria-label="Chercher un autre lien">
+                  <i class="bi bi-search" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  class="icon-button"
+                  *ngIf="point.price > 100"
+                  (click)="findCheaperAlternatives(gift, point)"
+                  aria-label="Chercher une option moins chère">
+                  <i class="bi bi-piggy-bank" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <ng-template #noOptions><p class="missing-options">Aucune option d’achat renseignée.</p></ng-template>
+        </div>
+
+        <footer class="gift-card__footer" *ngIf="isAuthenticated && !hasActiveFilters">
+          <button type="button" (click)="moveGiftPosition(giftIndex, 'up')" [disabled]="giftIndex === 0 || isReordering">
+            <i class="bi bi-arrow-up" aria-hidden="true"></i> Monter
+          </button>
+          <span>Priorité {{ gifts.indexOf(gift) + 1 }}</span>
+          <button type="button" (click)="moveGiftPosition(giftIndex, 'down')" [disabled]="giftIndex === gifts.length - 1 || isReordering">
+            Descendre <i class="bi bi-arrow-down" aria-hidden="true"></i>
+          </button>
+        </footer>
+      </article>
+    </div>
+  </section>
+</div>
+
+<div class="modal-backdrop" *ngIf="showFindLinkModal" (click)="closeFindLinkModal()"></div>
+<div class="app-modal" *ngIf="showFindLinkModal" role="dialog" aria-modal="true" aria-labelledby="find-link-title">
+  <div class="app-modal__panel" #modalContent tabindex="-1" (click)="$event.stopPropagation()">
+    <header class="app-modal__header">
+      <div>
+        <p class="section-kicker">Assistant d’achat</p>
+        <h2 id="find-link-title">Trouver un autre lien</h2>
+        <p>{{ currentSearchItem }}</p>
+      </div>
+      <button type="button" class="icon-button" (click)="closeFindLinkModal()" aria-label="Fermer">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="app-modal__body">
+      <div class="modal-loading" *ngIf="searchingForLinks">
+        <span class="large-spinner"></span>
+        <h3>Recherche en cours</h3>
+        <p>Nous préparons des pistes d’achat adaptées à cette option.</p>
+      </div>
+
+      <div *ngIf="!searchingForLinks">
+        <p class="modal-help">Choisissez une piste pour remplacer le lien actuel de cette option.</p>
+        <div class="link-results" *ngIf="alternativeLinks.length; else noLinkResults">
+          <button type="button" *ngFor="let link of alternativeLinks" (click)="updateGiftLink(link.url)">
+            <span><strong>{{ link.title }}</strong><small>{{ link.price }}</small></span>
+            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+          </button>
+        </div>
+        <ng-template #noLinkResults><p class="missing-options">Aucune piste disponible pour le moment.</p></ng-template>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Find Alternative Links Modal -->
-<div class="modal-backdrop" *ngIf="showFindLinkModal"></div>
-<div class="modal" [class.d-block]="showFindLinkModal" tabindex="-1" role="dialog" 
-    aria-labelledby="findLinkModalLabel" [attr.aria-hidden]="!showFindLinkModal" [attr.aria-modal]="showFindLinkModal">
-  <div class="modal-dialog modal-dialog-centered" role="document" (click)="$event.stopPropagation()">
-    <div class="modal-content shadow-lg animate-fade-in" #modalContent tabindex="-1">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="findLinkModalLabel">
-          <i class="bi bi-robot me-2"></i>Recherche IA pour: {{ currentSearchItem }}
-        </h5>
-        <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="closeFindLinkModal()" #closeButton></button>
+<div class="modal-backdrop" *ngIf="showCheaperAlternativesModal" (click)="closeCheaperAlternativesModal()"></div>
+<div class="app-modal" *ngIf="showCheaperAlternativesModal" role="dialog" aria-modal="true" aria-labelledby="cheaper-title">
+  <div class="app-modal__panel app-modal__panel--wide" (click)="$event.stopPropagation()">
+    <header class="app-modal__header">
+      <div>
+        <p class="section-kicker">Autour de {{ currentProductPrice }} €</p>
+        <h2 id="cheaper-title">Une option plus douce</h2>
+        <p>{{ currentProductName }} · {{ currentProductOption }}</p>
       </div>
-      <div class="modal-body">
-        <div *ngIf="searchingForLinks" class="text-center py-4">
-          <div class="spinner-border text-primary"></div>
-          <p class="mt-2">L'IA cherche un lien fonctionnel et vérifié...</p>
-          <p class="text-muted small">Nous vérifions la disponibilité du produit en temps réel</p>
-        </div>
-        
-        <div *ngIf="!searchingForLinks">
-          <div *ngIf="alternativeLinks.length === 1 && alternativeLinks[0].url && !alternativeLinks[0].url.includes('search')">
-            <div class="alert alert-success mb-3">
-              <i class="bi bi-check-circle-fill me-2"></i>
-              <strong>Lien fonctionnel trouvé!</strong>
-            </div>
-            
-            <p class="text-muted mb-3">
-              L'IA a trouvé un lien qui fonctionne pour ce cadeau:
-            </p>
-          </div>
-          
-          <div *ngIf="alternativeLinks.length > 1 || (alternativeLinks.length === 1 && alternativeLinks[0].url && alternativeLinks[0].url.includes('search'))">
-            <div class="alert alert-warning mb-3">
-              <i class="bi bi-exclamation-triangle-fill me-2"></i>
-              <strong>Aucun lien direct n'a été trouvé</strong>
-            </div>
-            
-          <p class="text-muted mb-3">
-              Voici des pages de recherche où vous pourriez trouver ce cadeau:
-          </p>
-          </div>
-          
-          <div class="list-group shadow-sm">
-            <a *ngFor="let link of alternativeLinks" 
-               href="javascript:void(0)" 
-               (click)="updateGiftLink(link.url)"
-               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-              <div>
-                <h6 class="mb-1">{{ link.title }}</h6>
-                <p class="mb-1 small text-primary fw-bold" *ngIf="link.price">{{ link.price }}</p>
-              </div>
-              <span class="badge bg-success rounded-pill">
-                <i class="bi bi-arrow-right-circle-fill fs-5"></i>
-              </span>
-            </a>
-          </div>
-          
-          <div class="alert alert-info mt-3">
-            <i class="bi bi-info-circle me-2"></i>
-            Cliquez sur un lien pour l'ajouter à votre liste de souhaits.
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="closeFindLinkModal()">Fermer</button>
-      </div>
-    </div>
-  </div>
-</div>
+      <button type="button" class="icon-button" (click)="closeCheaperAlternativesModal()" aria-label="Fermer">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </header>
 
-<!-- Cheaper Alternatives Modal -->
-<div class="modal-backdrop" *ngIf="showCheaperAlternativesModal"></div>
-<div class="modal" [class.d-block]="showCheaperAlternativesModal" tabindex="-1" role="dialog" 
-    aria-labelledby="cheaperAlternativesModalLabel" [attr.aria-hidden]="!showCheaperAlternativesModal" [attr.aria-modal]="showCheaperAlternativesModal">
-  <div class="modal-dialog modal-dialog-centered modal-lg" role="document" (click)="$event.stopPropagation()">
-    <div class="modal-content shadow-lg animate-fade-in" tabindex="-1">
-      <div class="modal-header bg-warning text-dark">
-        <h5 class="modal-title" id="cheaperAlternativesModalLabel">
-          <i class="bi bi-currency-euro me-2"></i>Options moins chères pour: {{ currentProductName }}
-        </h5>
-        <button type="button" class="btn-close" aria-label="Close" (click)="closeCheaperAlternativesModal()"></button>
+    <div class="app-modal__body">
+      <div class="modal-loading" *ngIf="loadingCheaperAlternatives">
+        <span class="large-spinner"></span>
+        <h3>Comparaison des options</h3>
+        <p>L’IA cherche des alternatives cohérentes et moins chères.</p>
       </div>
-      <div class="modal-body">
-        <div *ngIf="loadingCheaperAlternatives" class="text-center py-4">
-          <div class="spinner-border text-warning"></div>
-          <p class="mt-2">Recherche d'alternatives moins chères...</p>
-          <p class="text-muted small">L'IA cherche des options similaires à prix réduit</p>
-        </div>
-        
-        <div *ngIf="!loadingCheaperAlternatives">
-          <div *ngIf="cheaperAlternatives.length === 0" class="alert alert-info">
-            <i class="bi bi-info-circle-fill me-2"></i>
-            <strong>Aucune alternative trouvée</strong>
-            <p class="mb-0 mt-2">L'IA n'a pas pu trouver d'alternatives moins chères pour ce produit.</p>
+
+      <div class="alternative-grid" *ngIf="!loadingCheaperAlternatives && cheaperAlternatives.length">
+        <article *ngFor="let alternative of cheaperAlternatives">
+          <div class="alternative-grid__price">
+            <strong>{{ alternative.price }} €</strong>
+            <span>− {{ currentProductPrice - alternative.price }} €</span>
           </div>
-          
-          <div *ngIf="cheaperAlternatives.length > 0">
-            <div class="mb-3">
-              <div class="alert alert-success">
-                <i class="bi bi-check-circle-fill me-2"></i>
-                <strong>Alternatives trouvées!</strong>
-                <p class="mb-0">Voici des options similaires à prix réduit pour remplacer "{{ currentProductOption }}". Cliquez sur une option pour l'ajouter à votre carte.</p>
-              </div>
-            </div>
-            
-            <div class="row">
-              <div *ngFor="let alternative of cheaperAlternatives" class="col-md-6 mb-3">
-                <div class="card h-100 shadow-sm">
-                  <div class="card-body">
-                    <h6 class="card-title text-primary">{{ alternative.label }}</h6>
-                    
-                    <div class="d-flex justify-content-between align-items-center mt-2">
-                      <span class="badge bg-success">{{ alternative.price }} €</span>
-                      <span class="badge bg-light text-dark">Économie: {{ currentProductPrice - alternative.price }} €</span>
-                    </div>
-                    
-                    <p class="card-text small mt-2">{{ alternative.description }}</p>
-                    
-                    <div class="mt-3">
-                      <button class="btn btn-sm btn-success w-100" (click)="addCheaperAlternative(alternative)">
-                        <i class="bi bi-plus-circle me-1"></i> Ajouter cette option
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          <h3>{{ alternative.label }}</h3>
+          <p>{{ alternative.description }}</p>
+          <button type="button" class="button button--small button--ink" (click)="addCheaperAlternative(alternative)">
+            Ajouter cette option
+          </button>
+        </article>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="closeCheaperAlternativesModal()">Fermer</button>
+
+      <div class="modal-loading" *ngIf="!loadingCheaperAlternatives && !cheaperAlternatives.length">
+        <span class="empty-state__icon"><i class="bi bi-search" aria-hidden="true"></i></span>
+        <h3>Aucune alternative trouvée</h3>
+        <p>Gardez l’option actuelle ou relancez la recherche plus tard.</p>
       </div>
     </div>
   </div>

@@ -36,7 +36,10 @@ Ce backend Node.js/Express fournit les API pour l'application Liste de Cadeaux, 
    - `NODE_ENV`: production
    - `PORT`: 3000
    - `DATABASE_URL`: La chaîne de connexion PostgreSQL (automatiquement liée si vous utilisez render.yaml)
-   - `SECRET_KEY`: clé secrète pour sécuriser l'API
+   - `SECRET_KEY`: clé longue utilisée pour signer les jetons administrateur
+   - `ADMIN_PASSWORD`: mot de passe de l'espace administrateur
+   - `GEMINI_API_KEY`: clé API Gemini, jamais exposée au frontend
+   - `GEMINI_MODEL`: modèle Gemini à utiliser
 
 6. Déployez le service en cliquant sur "Create Web Service"
 
@@ -57,6 +60,9 @@ Pour simplifier le déploiement, vous pouvez utiliser le fichier `render.yaml` p
    PORT=3000
    DATABASE_URL=postgres://username:password@localhost:5432/gift-list
    SECRET_KEY=votre_clé_secrète
+   ADMIN_PASSWORD=votre_mot_de_passe
+   GEMINI_API_KEY=votre_clé_gemini
+   GEMINI_MODEL=gemini-3.5-flash
    ```
 
 3. Installez les dépendances:
@@ -80,8 +86,10 @@ Pour simplifier le déploiement, vous pouvez utiliser le fichier `render.yaml` p
 ## Points d'API
 
 - `GET /api/health` - Vérification de l'état du serveur
+- `POST /api/auth/login` - Connexion administrateur
 - `GET /api/gifts` - Récupérer tous les cadeaux
 - `POST /api/gifts` - Ajouter un nouveau cadeau
 - `PUT /api/gifts/:id` - Mettre à jour un cadeau
 - `DELETE /api/gifts/:id` - Supprimer un cadeau
-- `GET /api/export` - Exporter tous les cadeaux au format JSON 
+- `GET /api/export` - Exporter tous les cadeaux au format JSON
+- `POST /api/ai/generate` - Générer des suggestions via le proxy Gemini

@@ -1,21 +1,17 @@
 import { Injectable } from '@angular/core';
-import { Observable, from, map, catchError, of } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, from, map, catchError, of, firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GiftAiService {
-  private genAI: GoogleGenerativeAI;
-  private model: any;
-
-  constructor() {
-    this.genAI = new GoogleGenerativeAI(environment.geminiApiKey);
-    this.model = this.genAI.getGenerativeModel({
-      model: environment.geminiModel
-    });
-  }
+  constructor(
+    private readonly http: HttpClient,
+    private readonly authService: AuthService
+  ) {}
 
   /**
    * Génère des suggestions de cadeaux basées sur un prompt
@@ -24,6 +20,9 @@ export class GiftAiService {
    * @returns Une Observable contenant les suggestions de cadeaux
    */
   generateGiftSuggestions(prompt: string, existingGifts: any[] = []): Observable<any> {
+    // Détecter si le prompt mentionne un produit spécifique
+    const isSpecificProduct = this.isSpecificProductPrompt(prompt);
+    
     // Extraire les catégories et intérêts des cadeaux existants
     let existingCategories: string[] = [];
     let existingInterests: string[] = [];
@@ -39,111 +38,251 @@ export class GiftAiService {
       existingInterests = this.extractInterests(existingGifts);
       
       // Construction d'un prompt structuré qui prend en compte les cadeaux existants
-      const structuredPrompt = `
-      Voici une demande de suggestions de cadeaux: "${prompt}".
+      let structuredPrompt: string;
       
-      L'utilisateur a déjà les cadeaux suivants dans sa liste de souhaits:
-      ${existingGiftsContext}
-      
-      J'ai identifié ces centres d'intérêt possibles: ${existingInterests.join(', ')}
-      Et ces catégories possibles: ${existingCategories.join(', ')}
-      
-      IMPORTANT: 
-      - Sois BREF et CONCIS dans toutes tes réponses
-      - Identifie 1-2 centres d'intérêt PRINCIPAUX et concentre-toi sur eux
-      - Ne force PAS des connexions entre des intérêts non liés (ex: ne pas mélanger golf et art)
-      - Suggère des cadeaux qui correspondent DIRECTEMENT à un intérêt spécifique
-      
-      Suggère 3 idées de cadeaux en suivant ces règles:
-      1. Chaque cadeau doit être clairement lié à UN intérêt spécifique (pas de combinaisons forcées)
-      2. Les suggestions doivent être concrètes et utiles
-      3. Évite les cadeaux trop similaires à ceux déjà dans la liste
-      4. Privilégie les cadeaux directement liés au centre d'intérêt
-      
-      Pour l'analyse:
-      - Identifie les 1-2 centres d'intérêt PRINCIPAUX ressortant de la demande et des cadeaux existants
-      - Explique brièvement pourquoi tu te concentres sur ces intérêts spécifiques
-      
-      Pour chaque cadeau, fournis:
-      1. Un nom descriptif court et précis
-      2. Une brève description (max 80 caractères)
-      3. Un court raisonnement (max 100 caractères)
-      4. Trois options de prix (bas, moyen, élevé) avec:
-         - Label court et descriptif
-         - Prix (en euros, sans symbole €)
-         - Un lien e-commerce fictif
-      
-      Retourne le résultat sous forme de JSON structuré comme ceci:
-      {
-        "analysisIntro": "Identification claire des 1-2 intérêts principaux (max 100 caractères)",
-        "analysisMethod": "Explication courte du focus (max 80 caractères)",
-        "identifiedInterests": ["intérêt1", "intérêt2"],
-        "suggestions": [
-          {
-            "name": "Nom du cadeau",
-            "description": "Description brève (max 80 caractères)",
-            "reasoning": "Explication du lien direct avec l'intérêt principal (max 100 caractères)",
-            "relatedInterests": ["Un seul intérêt principal"],
-            "pricePoints": [
-              {"label": "Option Budget", "price": 15, "link": "https://example.com/budget"},
-              {"label": "Option Standard", "price": 30, "link": "https://example.com/standard"},
-              {"label": "Option Premium", "price": 60, "link": "https://example.com/premium"}
-            ]
-          },
-          ...
-        ]
+      if (isSpecificProduct) {
+        // Prompt optimisé pour un produit spécifique
+        structuredPrompt = `
+        Voici une demande pour un produit spécifique: "${prompt}".
+        
+        L'utilisateur a déjà les cadeaux suivants dans sa liste de souhaits:
+        ${existingGiftsContext}
+        
+        IMPORTANT:
+        - Traite le prompt comme une demande de produit spécifique
+        - Fournis des informations détaillées sur ce produit précis
+        - Ne suggère PAS de produits alternatifs ou non liés
+        - Sois BREF et CONCIS dans ta réponse
+        
+        Génère une réponse pour ce produit spécifique:
+        1. Fournis un nom précis et technique du produit
+        2. Une description détaillée mais concise (max 80 caractères)
+        3. Un court texte expliquant les principales caractéristiques (max 100 caractères)
+        4. Trois options de prix (bas, moyen, élevé) qui reflètent les variantes réelles du produit:
+           - Label descriptif précis de la variante
+           - Prix estimé réaliste (en euros, sans symbole €)
+           - Un lien e-commerce fictif
+        
+        Retourne le résultat sous forme de JSON structuré comme ceci:
+        {
+          "analysisIntro": "Il s'agit d'un produit spécifique: [nom exact du produit]",
+          "analysisMethod": "Informations sur ce produit précis",
+          "identifiedInterests": ["centre d'intérêt principal lié à ce produit"],
+          "suggestions": [
+            {
+              "name": "Nom exact et technique du produit",
+              "description": "Description technique précise (max 80 caractères)",
+              "reasoning": "Principales caractéristiques et utilisations (max 100 caractères)",
+              "relatedInterests": ["Centre d'intérêt principal lié au produit"],
+              "pricePoints": [
+                {"label": "Version basique", "price": prix réaliste, "link": "https://example.com/budget"},
+                {"label": "Version standard", "price": prix réaliste, "link": "https://example.com/standard"},
+                {"label": "Version premium", "price": prix réaliste, "link": "https://example.com/premium"}
+              ]
+            }
+          ]
+        }
+        `;
+      } else {
+        // Prompt standard pour suggestions variées
+        structuredPrompt = `
+        Voici une demande de suggestions de cadeaux: "${prompt}".
+        
+        L'utilisateur a déjà les cadeaux suivants dans sa liste de souhaits:
+        ${existingGiftsContext}
+        
+        J'ai identifié ces centres d'intérêt possibles: ${existingInterests.join(', ')}
+        Et ces catégories possibles: ${existingCategories.join(', ')}
+        
+        IMPORTANT: 
+        - Sois BREF et CONCIS dans toutes tes réponses
+        - Identifie 1-2 centres d'intérêt PRINCIPAUX et concentre-toi sur eux
+        - Ne force PAS des connexions entre des intérêts non liés (ex: ne pas mélanger golf et art)
+        - Suggère des cadeaux qui correspondent DIRECTEMENT à un intérêt spécifique
+        
+        Suggère 3 idées de cadeaux en suivant ces règles:
+        1. Chaque cadeau doit être clairement lié à UN intérêt spécifique (pas de combinaisons forcées)
+        2. Les suggestions doivent être concrètes et utiles
+        3. Évite les cadeaux trop similaires à ceux déjà dans la liste
+        4. Privilégie les cadeaux directement liés au centre d'intérêt
+        
+        Pour l'analyse:
+        - Identifie les 1-2 centres d'intérêt PRINCIPAUX ressortant de la demande et des cadeaux existants
+        - Explique brièvement pourquoi tu te concentres sur ces intérêts spécifiques
+        
+        Pour chaque cadeau, fournis:
+        1. Un nom descriptif court et précis
+        2. Une brève description (max 80 caractères)
+        3. Un court raisonnement (max 100 caractères)
+        4. Trois options de prix (bas, moyen, élevé) avec:
+           - Label court et descriptif
+           - Prix (en euros, sans symbole €)
+           - Un lien e-commerce fictif
+        
+        Retourne le résultat sous forme de JSON structuré comme ceci:
+        {
+          "analysisIntro": "Identification claire des 1-2 intérêts principaux (max 100 caractères)",
+          "analysisMethod": "Explication courte du focus (max 80 caractères)",
+          "identifiedInterests": ["intérêt1", "intérêt2"],
+          "suggestions": [
+            {
+              "name": "Nom du cadeau",
+              "description": "Description brève (max 80 caractères)",
+              "reasoning": "Explication du lien direct avec l'intérêt principal (max 100 caractères)",
+              "relatedInterests": ["Un seul intérêt principal"],
+              "pricePoints": [
+                {"label": "Option Budget", "price": 15, "link": "https://example.com/budget"},
+                {"label": "Option Standard", "price": 30, "link": "https://example.com/standard"},
+                {"label": "Option Premium", "price": 60, "link": "https://example.com/premium"}
+              ]
+            },
+            ...
+          ]
+        }
+        `;
       }
-      `;
       
       // Appel à l'API Gemini et conversion en Observable
       return from(this.generateContent(structuredPrompt));
     } else {
-      // Si aucun cadeau existant, utiliser un prompt simple mais qui inclut quand même le raisonnement
-    const structuredPrompt = `
-    Suggère 3 idées de cadeaux basées sur cette description: "${prompt}".
+      // Si aucun cadeau existant
+      let structuredPrompt: string;
       
-      IMPORTANT: 
-      - Sois BREF et CONCIS dans toutes tes réponses
-      - Identifie 1-2 centres d'intérêt PRINCIPAUX dans la demande et concentre-toi sur eux
-      - Suggère des cadeaux qui correspondent DIRECTEMENT à un intérêt spécifique
-      - Ne force PAS des connexions entre des intérêts non liés
-      
-      Pour l'analyse:
-      - Identifie les 1-2 intérêts PRINCIPAUX ressortant de la demande
-      - Concentre chaque suggestion sur UN intérêt spécifique
-      
-    Pour chaque cadeau, fournis:
-      1. Un nom descriptif court et précis
-      2. Une brève description (max 80 caractères)
-      3. Un court raisonnement (max 100 caractères)
-      4. Trois options de prix (bas, moyen, élevé) avec:
-         - Label court et descriptif
-         - Prix (en euros, sans symbole €)
-       - Un lien e-commerce fictif
-    
-    Retourne le résultat sous forme de JSON structuré comme ceci:
-    {
-        "analysisIntro": "Identification claire des 1-2 intérêts principaux (max 100 caractères)",
-        "analysisMethod": "Explication courte du focus (max 80 caractères)",
-      "suggestions": [
+      if (isSpecificProduct) {
+        // Prompt pour un produit spécifique sans contexte de cadeaux existants
+        structuredPrompt = `
+        Voici une demande pour un produit spécifique: "${prompt}".
+        
+        IMPORTANT:
+        - Traite le prompt comme une demande de produit spécifique
+        - Fournis des informations détaillées sur ce produit précis
+        - Ne suggère PAS de produits alternatifs ou non liés
+        - Sois BREF et CONCIS dans ta réponse
+        
+        Génère une réponse pour ce produit spécifique:
+        1. Fournis un nom précis et technique du produit
+        2. Une description détaillée mais concise (max 80 caractères)
+        3. Un court texte expliquant les principales caractéristiques (max 100 caractères)
+        4. Trois options de prix (bas, moyen, élevé) qui reflètent les variantes réelles du produit:
+           - Label descriptif précis de la variante
+           - Prix estimé réaliste (en euros, sans symbole €)
+           - Un lien e-commerce fictif
+        
+        Retourne le résultat sous forme de JSON structuré comme ceci:
         {
-          "name": "Nom du cadeau",
-            "description": "Description brève (max 80 caractères)",
-            "reasoning": "Explication du lien direct avec l'intérêt principal (max 100 caractères)",
-          "pricePoints": [
-            {"label": "Option Budget", "price": 15, "link": "https://example.com/budget"},
-            {"label": "Option Standard", "price": 30, "link": "https://example.com/standard"},
-            {"label": "Option Premium", "price": 60, "link": "https://example.com/premium"}
+          "analysisIntro": "Il s'agit d'un produit spécifique: [nom exact du produit]",
+          "analysisMethod": "Informations sur ce produit précis",
+          "suggestions": [
+            {
+              "name": "Nom exact et technique du produit",
+              "description": "Description technique précise (max 80 caractères)",
+              "reasoning": "Principales caractéristiques et utilisations (max 100 caractères)",
+              "pricePoints": [
+                {"label": "Version basique", "price": prix réaliste, "link": "https://example.com/budget"},
+                {"label": "Version standard", "price": prix réaliste, "link": "https://example.com/standard"},
+                {"label": "Version premium", "price": prix réaliste, "link": "https://example.com/premium"}
+              ]
+            }
           ]
-        },
-        ...
-      ]
+        }
+        `;
+      } else {
+        // Prompt standard pour suggestions variées sans contexte de cadeaux existants
+        structuredPrompt = `
+        Suggère 3 idées de cadeaux basées sur cette description: "${prompt}".
+          
+        IMPORTANT: 
+        - Sois BREF et CONCIS dans toutes tes réponses
+        - Identifie 1-2 centres d'intérêt PRINCIPAUX dans la demande et concentre-toi sur eux
+        - Suggère des cadeaux qui correspondent DIRECTEMENT à un intérêt spécifique
+        - Ne force PAS des connexions entre des intérêts non liés
+        
+        Pour l'analyse:
+        - Identifie les 1-2 intérêts PRINCIPAUX ressortant de la demande
+        - Concentre chaque suggestion sur UN intérêt spécifique
+        
+        Pour chaque cadeau, fournis:
+        1. Un nom descriptif court et précis
+        2. Une brève description (max 80 caractères)
+        3. Un court raisonnement (max 100 caractères)
+        4. Trois options de prix (bas, moyen, élevé) avec:
+           - Label court et descriptif
+           - Prix (en euros, sans symbole €)
+           - Un lien e-commerce fictif
+        
+        Retourne le résultat sous forme de JSON structuré comme ceci:
+        {
+          "analysisIntro": "Identification claire des 1-2 intérêts principaux (max 100 caractères)",
+          "analysisMethod": "Explication courte du focus (max 80 caractères)",
+          "suggestions": [
+            {
+              "name": "Nom du cadeau",
+              "description": "Description brève (max 80 caractères)",
+              "reasoning": "Explication du lien direct avec l'intérêt principal (max 100 caractères)",
+              "pricePoints": [
+                {"label": "Option Budget", "price": 15, "link": "https://example.com/budget"},
+                {"label": "Option Standard", "price": 30, "link": "https://example.com/standard"},
+                {"label": "Option Premium", "price": 60, "link": "https://example.com/premium"}
+              ]
+            },
+            ...
+          ]
+        }
+        `;
+      }
+      
+      // Appel à l'API Gemini et conversion en Observable
+      return from(this.generateContent(structuredPrompt));
     }
-    `;
+  }
+
+  /**
+   * Détecte si le prompt concerne un produit spécifique plutôt qu'une demande générale
+   * @param prompt Le prompt à analyser
+   * @returns true si le prompt semble mentionner un produit spécifique
+   */
+  private isSpecificProductPrompt(prompt: string): boolean {
+    // Liste de modèles/marques spécifiques connus
+    const specificProductPatterns = [
+      // Imprimantes 3D
+      /bambu\s*lab/i, /prusa/i, /creality/i, /ender/i, /anycubic/i, 
+      // Smartphones et électronique
+      /iphone\s*\d+/i, /galaxy\s*s\d+/i, /pixel\s*\d+/i, /macbook/i, /ipad/i,
+      // Consoles de jeux
+      /playstation\s*\d+/i, /ps\d+/i, /xbox/i, /nintendo\s*switch/i,
+      // Autres produits spécifiques
+      /dyson/i, /airpods/i, /oculus/i, /meta\s*quest/i
+    ];
     
-    // Appel à l'API Gemini et conversion en Observable
-    return from(this.generateContent(structuredPrompt));
+    // Vérifier les modèles spécifiques
+    for (const pattern of specificProductPatterns) {
+      if (pattern.test(prompt)) {
+        return true;
+      }
     }
+    
+    // Rechercher des termes qui indiquent une référence de produit
+    const modelNumberPatterns = [
+      /\b[a-zA-Z]\d+\b/i,      // Modèles comme A1, X5, S22
+      /\bv\d+\b/i,             // Versions comme v2, V10
+      /pro\b/i, /max\b/i, /plus\b/i, /ultra\b/i, /mini\b/i  // Suffixes courants de produits
+    ];
+    
+    for (const pattern of modelNumberPatterns) {
+      if (pattern.test(prompt)) {
+        return true;
+      }
+    }
+    
+    // Vérifier les mots-clés qui suggèrent un produit précis
+    const specificKeywords = ['marque', 'modèle', 'référence', 'version'];
+    for (const keyword of specificKeywords) {
+      if (prompt.toLowerCase().includes(keyword)) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   /**
@@ -452,9 +591,18 @@ export class GiftAiService {
    */
   private async generateContent(prompt: string): Promise<any> {
     try {
-      const result = await this.model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
+      const token = this.authService.getAuthToken();
+      let headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+      if (token) {
+        headers = headers.set('Authorization', `Bearer ${token}`);
+      }
+
+      const response = await firstValueFrom(this.http.post<{ text: string }>(
+        `${environment.apiUrl}/ai/generate`,
+        { prompt },
+        { headers }
+      ));
+      const text = response.text;
       
       // Extraction du JSON depuis la réponse
       const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/{[\s\S]*}/);

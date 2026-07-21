@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script de déploiement pour l'application Cadeau-anniv
+# Script de déclenchement du déploiement Gift Finder
 
 echo "=== Déploiement de l'application Cadeau-anniv ==="
 echo ""
@@ -12,19 +12,15 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-# Push vers GitHub (déclenchera le déploiement automatique sur Render)
+# Push vers GitHub (déclenche la pipeline VPS)
 echo "🚀 Push des modifications vers GitHub..."
 git push origin main
 
 echo ""
 echo "✅ Push terminé!"
 echo ""
-echo "🔄 Le déploiement backend sur Render devrait démarrer automatiquement."
-echo ""
-echo "Pour déployer le frontend sur Vercel ou Netlify:"
-echo "1. Construisez l'application Angular:"
-echo "   cd gift-list && npm run build --prod"
-echo ""
-echo "2. Déployez le contenu du dossier 'gift-list/dist/gift-list' sur votre plateforme préférée"
+echo "🔄 La pipeline GitHub Actions déploie maintenant l'application complète sur le VPS."
+echo "🌐 URL cible: https://gift-finder.duckdns.org"
+echo "📋 Suivi: https://github.com/jeancdf/Cadeau-anniv/actions"
 echo ""
 echo "=== Script terminé ===" 

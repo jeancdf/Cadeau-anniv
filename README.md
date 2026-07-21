@@ -6,8 +6,8 @@ Une application web complète pour gérer des listes de cadeaux avec des suggest
 
 Ce projet est organisé en monorepo avec deux dossiers principaux:
 
-- `/frontend` : Application Angular
-- `/backend` : API REST Node.js + Express + MongoDB
+- `/gift-list` : application Angular
+- `/backend` : API REST Node.js + Express + PostgreSQL (Sequelize)
 
 ## Fonctionnalités
 
@@ -17,17 +17,20 @@ Ce projet est organisé en monorepo avec deux dossiers principaux:
 - Réorganisation des cadeaux par priorité via drag & drop
 - Suggestions de cadeaux par IA (Gemini)
 - Export de la liste au format JSON
+- Recherche, filtres par budget et partage de la liste
+- Thèmes clair et sombre, interface responsive
 
 ### Backend
 - API REST complète pour la gestion des cadeaux
-- Authentification simple via clé secrète
-- Base de données MongoDB
+- Réorganisation atomique des priorités
+- Authentification administrateur par jeton signé et temporaire
+- Base de données PostgreSQL
 
 ## Installation
 
 ### Prérequis
-- Node.js (v16+)
-- MongoDB
+- Node.js (v18+)
+- PostgreSQL
 - Clé API Gemini (Google Generative AI)
 
 ### Installation du backend
@@ -37,9 +40,12 @@ npm install
 cp config.env.example config.env # Créer et configurer le fichier .env
 ```
 
-Configurez les variables d'environnement dans le fichier config.env:
-- `MONGO_URI`: URL de connexion MongoDB
-- `SECRET_KEY`: Clé secrète pour l'authentification
+Configurez les variables d'environnement dans le fichier `config.env` :
+- `DATABASE_URL`: URL de connexion PostgreSQL
+- `SECRET_KEY`: Clé longue utilisée pour signer les jetons administrateur
+- `ADMIN_PASSWORD`: Mot de passe de l'espace administrateur
+- `GEMINI_API_KEY`: Clé Gemini, conservée uniquement côté serveur
+- `GEMINI_MODEL`: Modèle Gemini utilisé par le backend
 - `PORT`: Port du serveur (défaut: 3000)
 
 ### Installation du frontend
@@ -48,8 +54,8 @@ cd gift-list
 npm install
 ```
 
-Configurez l'API Gemini dans `/src/environments/environment.ts`:
-- Remplacez `YOUR_GEMINI_API_KEY` par votre clé API Gemini
+Le frontend ne nécessite aucun secret. En développement il appelle l'API sur
+`http://localhost:3000/api`; en production il utilise `/api` sur le même domaine.
 
 ## Démarrage
 
@@ -69,21 +75,51 @@ L'application sera accessible à l'adresse: http://localhost:4200
 
 ## Déploiement
 
-### Frontend
-Le frontend peut être déployé sur GitHub Pages:
+Chaque push sur `main` déclenche `.github/workflows/deploy-vps.yml`. La pipeline :
+
+- envoie une archive au compte `deploy` du VPS ;
+- construit et démarre Angular, l'API et PostgreSQL avec Docker Compose ;
+- conserve PostgreSQL dans le volume nommé `gift-finder_postgres_data` ;
+- connecte uniquement le frontend au réseau Caddy `qr-code_app_net` ;
+- ajoute de façon idempotente la route HTTPS `gift-finder.duckdns.org` au Caddy
+  existant, après sauvegarde et validation de sa configuration ;
+- vérifie ensuite `https://gift-finder.duckdns.org/api/health`.
+
+Le backend, PostgreSQL et leurs ports ne sont jamais publiés sur l'hôte.
+
+### Secrets GitHub requis
+
+Dans `Settings > Secrets and variables > Actions`, configurez :
+
+- `VPS_SSH_PRIVATE_KEY` : clé privée du compte VPS `deploy` ;
+- `VPS_KNOWN_HOSTS` : entrée `known_hosts` de `51.210.109.16` ;
+- `POSTGRES_PASSWORD` : mot de passe de la base interne ;
+- `APP_SECRET_KEY` : chaîne aléatoire longue pour signer les jetons ;
+- `ADMIN_PASSWORD` : mot de passe de l'espace d'administration ;
+- `GEMINI_API_KEY` : nouvelle clé Gemini ;
+- `GEMINI_MODEL` : facultatif, `gemini-3.5-flash` par défaut.
+
+Les valeurs VPS utilisées par défaut sont `51.210.109.16`, utilisateur `deploy` et
+port `22`. Elles peuvent être surchargées avec les variables GitHub `VPS_HOST`,
+`VPS_USER` et `VPS_PORT`.
+
+### Inspection manuelle du VPS
 
 ```bash
-cd gift-list
-ng build --configuration=production
+ssh -i ~/.ssh/id_ed25519_ovh_deploy deploy@51.210.109.16
+docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}'
+docker compose ls
+ss -ltn
+docker compose --project-name gift-finder \
+  --env-file /home/deploy/gift-finder/.env \
+  -f /home/deploy/gift-finder/current/docker-compose.prod.yml ps
 ```
 
-### Backend
-Le backend peut être déployé sur Render.com. Définissez les variables d'environnement dans le dashboard Render:
-- `MONGO_URI`: URL de connexion MongoDB Atlas
-- `SECRET_KEY`: Clé secrète pour l'authentification
+Les versions déployées sont conservées dans `/home/deploy/gift-finder/releases`
+et le lien `/home/deploy/gift-finder/current` pointe vers la version active.
 
 ## Auteur
 - Votre Nom
 
 ## Licence
-MIT 
+MIT

@@ -67,11 +67,12 @@ export class LoginComponent {
 
   onLogin(): void {
     if (this.password) {
-      const success = this.authService.login(this.password);
-      this.loginError = !success;
-      if (success) {
-        this.password = '';
-      }
+      this.authService.login(this.password).subscribe(success => {
+        this.loginError = !success;
+        if (success) {
+          this.password = '';
+        }
+      });
     } else {
       this.loginError = true;
     }

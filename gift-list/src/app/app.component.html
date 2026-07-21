@@ -1,34 +1,36 @@
-<header class="bg-light shadow-sm py-3 mb-4">
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-12 d-flex justify-content-between align-items-center">
-        <h1 class="h4 mb-0">Ma liste de souhaits</h1>
-        
-        <!-- Controls: Login/Logout and Theme Toggle -->
-        <div class="d-flex align-items-center">
-          <app-theme-toggle class="me-3"></app-theme-toggle>
-          
-          <button *ngIf="!isAuthenticated" class="btn btn-primary btn-sm" (click)="showLoginModal()">
-            <i class="bi bi-lock"></i> Connexion Admin
-          </button>
-          
-          <button *ngIf="isAuthenticated" class="btn btn-outline-secondary btn-sm" (click)="logout()">
-            <i class="bi bi-box-arrow-right"></i> Déconnexion
-          </button>
-        </div>
-      </div>
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="brand" href="#" aria-label="Retour en haut de la liste">
+      <span class="brand__mark"><i class="bi bi-gift" aria-hidden="true"></i></span>
+      <span class="brand__copy">
+        <small>Carnet d’anniversaire</small>
+        <strong>La liste d’envies</strong>
+      </span>
+    </a>
+
+    <div class="site-header__actions">
+      <app-theme-toggle></app-theme-toggle>
+      <button *ngIf="!isAuthenticated" type="button" class="admin-button" aria-label="Ouvrir l’administration" (click)="showLoginModal()">
+        <i class="bi bi-lock" aria-hidden="true"></i>
+        <span>Administration</span>
+      </button>
+      <button *ngIf="isAuthenticated" type="button" class="admin-button admin-button--active" aria-label="Quitter le mode édition" (click)="logout()">
+        <span class="admin-dot"></span>
+        <span>Quitter l’édition</span>
+      </button>
     </div>
   </div>
 </header>
 
-<!-- Login Modal Container -->
-<div *ngIf="showModal">
-  <app-login-modal (modalClosed)="onModalClosed()"></app-login-modal>
-</div>
+<app-login-modal *ngIf="showModal" (modalClosed)="onModalClosed()"></app-login-modal>
 
-<app-gift-list></app-gift-list>
+<main>
+  <app-gift-list></app-gift-list>
+</main>
 
-<!-- Footer with Version -->
-<footer class="mt-5 py-3 bg-light text-center border-top">
-  <app-version-display></app-version-display>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <p>Des idées choisies, pour un cadeau qui tombe juste.</p>
+    <app-version-display></app-version-display>
+  </div>
 </footer>

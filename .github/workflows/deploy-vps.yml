@@ -1,0 +1,108 @@
+name: Deploy Gift Finder to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: gift-finder-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VPS_HOST: ${{ vars.VPS_HOST || '51.210.109.16' }}
+      VPS_USER: ${{ vars.VPS_USER || 'deploy' }}
+      VPS_PORT: ${{ vars.VPS_PORT || '22' }}
+      PUBLIC_DOMAIN: gift-finder.duckdns.org
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ secrets.GEMINI_MODEL || 'gemini-3.5-flash' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Préparer la configuration de production
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          : "${POSTGRES_PASSWORD:?Secret POSTGRES_PASSWORD manquant}"
+          : "${ADMIN_PASSWORD:?Secret ADMIN_PASSWORD manquant}"
+          : "${SECRET_KEY:?Secret APP_SECRET_KEY manquant}"
+          : "${GEMINI_API_KEY:?Secret GEMINI_API_KEY manquant}"
+
+          ENV_FILE="$RUNNER_TEMP/gift-finder-${GITHUB_SHA}.env"
+          umask 077
+          {
+            printf 'POSTGRES_DB=%s\n' 'gift_finder'
+            printf 'POSTGRES_USER=%s\n' 'gift_finder'
+            printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD"
+            printf 'SECRET_KEY=%s\n' "$SECRET_KEY"
+            printf 'ADMIN_PASSWORD=%s\n' "$ADMIN_PASSWORD"
+            printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
+            printf 'GEMINI_MODEL=%s\n' "$GEMINI_MODEL"
+          } > "$ENV_FILE"
+          chmod 600 "$ENV_FILE"
+
+      - name: Préparer SSH
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          : "${VPS_SSH_PRIVATE_KEY:?Secret VPS_SSH_PRIVATE_KEY manquant}"
+          : "${VPS_KNOWN_HOSTS:?Secret VPS_KNOWN_HOSTS manquant}"
+
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" | sed 's/\r$//' > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+
+      - name: Créer l'archive de déploiement
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          tar \
+            --exclude='.git' \
+            --exclude='*/node_modules' \
+            --exclude='*/dist' \
+            --exclude='*/.angular' \
+            --exclude='backend/config.env' \
+            -czf "$RUNNER_TEMP/gift-finder-${GITHUB_SHA}.tar.gz" \
+            .
+
+      - name: Envoyer la version au VPS
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          SCP_OPTIONS=(-i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes -o BatchMode=yes -P "$VPS_PORT")
+          TARGET="${VPS_USER}@${VPS_HOST}"
+
+          scp "${SCP_OPTIONS[@]}" \
+            "$RUNNER_TEMP/gift-finder-${GITHUB_SHA}.tar.gz" \
+            "$TARGET:/tmp/gift-finder-${GITHUB_SHA}.tar.gz"
+          scp "${SCP_OPTIONS[@]}" \
+            "$RUNNER_TEMP/gift-finder-${GITHUB_SHA}.env" \
+            "$TARGET:/tmp/gift-finder-${GITHUB_SHA}.env"
+
+      - name: Déployer avec Docker Compose
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          SSH_OPTIONS=(-i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes -o BatchMode=yes -p "$VPS_PORT")
+          TARGET="${VPS_USER}@${VPS_HOST}"
+
+          ssh "${SSH_OPTIONS[@]}" "$TARGET" \
+            "APP_SHA='$GITHUB_SHA' ARCHIVE_PATH='/tmp/gift-finder-${GITHUB_SHA}.tar.gz' ENV_PATH='/tmp/gift-finder-${GITHUB_SHA}.env' PUBLIC_DOMAIN='$PUBLIC_DOMAIN' bash -s" \
+            < deploy/remote-deploy.sh

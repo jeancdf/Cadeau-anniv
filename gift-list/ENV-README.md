@@ -1,36 +1,19 @@
-# Variables d'environnement pour Gift-List
+# Variables d'environnement
 
-## Configuration
+Le frontend ne contient plus de secret. En développement, il appelle
+`http://localhost:3000/api`; en production, il utilise `/api` sur le même domaine.
 
-1. Créez un fichier `.env` à la racine du dossier `gift-list` avec les variables suivantes :
+Les secrets sont configurés uniquement dans `backend/config.env` ou dans le fichier
+`.env` Docker du VPS :
 
-```
+```dotenv
+DATABASE_URL=postgres://postgres:mot-de-passe@localhost:5432/gift_list
+SECRET_KEY=une-cle-longue-et-aleatoire
+ADMIN_PASSWORD=un-mot-de-passe-administrateur
 GEMINI_API_KEY=votre-cle-api-gemini
-GEMINI_MODEL=gemini-2.5-pro-exp-03-25
-SECRET_KEY=votre-secret-key-de-production
+GEMINI_MODEL=gemini-3.5-flash
 ```
 
-2. Ces valeurs seront automatiquement injectées dans les fichiers d'environnement lors du build.
-
-## Utilisation
-
-- Pour le développement local : créez simplement le fichier `.env`
-- Pour la production : configurez ces variables sur votre plateforme de déploiement
-
-## Valeurs par défaut
-
-Si le fichier `.env` n'existe pas ou si certaines variables ne sont pas définies, les valeurs par défaut suivantes seront utilisées :
-
-- `GEMINI_API_KEY`: AIzaSyByahoGsqsWe6qkq_VVam8DGyRlS5xuOmA
-- `GEMINI_MODEL`: gemini-2.5-pro-exp-03-25
-- `SECRET_KEY`: dev-secret-key (en développement uniquement)
-
-## Construction avec variables d'environnement
-
-Pour construire l'application avec les variables d'environnement :
-
-```bash
-npm run build:prod
-```
-
-Ce script exécute `set-env.js` avant la compilation, qui remplace les variables dans les fichiers d'environnement. 
+Ne commitez jamais ces valeurs. La clé Gemini auparavant présente dans le dépôt doit
+être révoquée et remplacée, car supprimer sa valeur du code ne l'efface pas de
+l'historique Git.

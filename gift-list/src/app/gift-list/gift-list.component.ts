@@ -1,19 +1,40 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
+import { finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { GiftService } from '../services/gift.service';
 import { GiftAiService } from '../services/gift-ai.service';
-import { CdkDragDrop, moveItemInArray, CdkDropList, CdkDrag } from '@angular/cdk/drag-drop';
-import { FormGroup, FormBuilder, FormArray, Validators } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
-import { Router } from '@angular/router';
 
-interface CheaperAlternative {
+interface PricePoint {
   label: string;
   price: number;
   link: string;
+}
+
+interface Gift {
+  id: string;
+  name: string;
+  description?: string;
+  priority?: number;
+  pricePoints: PricePoint[];
+}
+
+interface CheaperAlternative extends PricePoint {
   description: string;
 }
+
+type AdminPanel = 'gift' | 'import' | 'ai';
+type BudgetFilter = 'all' | 'under-50' | '50-100' | 'over-100';
 
 @Component({
   selector: 'app-gift-list',
@@ -29,327 +50,441 @@ interface CheaperAlternative {
   styleUrl: './gift-list.component.css'
 })
 export class GiftListComponent implements OnInit, OnDestroy {
-  gifts: any[] = [];
+  gifts: Gift[] = [];
   giftForm: FormGroup;
   editMode = false;
   currentGiftId: string | null = null;
+  isAuthenticated = false;
+  isLoading = false;
+  isSaving = false;
+  isReordering = false;
+  loadError = '';
+  actionError = '';
+  successMessage = '';
+
+  adminPanel: AdminPanel = 'gift';
+  searchQuery = '';
+  budgetFilter: BudgetFilter = 'all';
+  shareLabel = 'Partager la liste';
+
   aiPrompt = '';
   aiSuggestions: any[] = [];
-  isLoading = false;
   isLoadingAi = false;
   existingListText = '';
   isImportingList = false;
-  isAuthenticated = false;
-  
-  // AI preferences
   aiMinPrice = 20;
   aiMaxPrice = 200;
   aiPreferences = '';
   aiDislikes = '';
-  
-  // AI reasoning information
   aiAnalysisIntro = '';
   aiAnalysisMethod = '';
   aiIdentifiedInterests: string[] = [];
   aiInterestPatterns = '';
   showAiReasoning = false;
-  
-  // AI category exploration
   suggestedCategories: any[] = [];
   isLoadingSuggestions = false;
-  selectedCategory: string = '';
+  selectedCategory = '';
   showCategorySuggestions = false;
   categoryAnalysisExplanation = '';
-  
-  // Find Link Modal data
+  showFullAnalysis = false;
+  expandedSuggestions: boolean[] = [];
+
   showFindLinkModal = false;
   searchingForLinks = false;
-  alternativeLinks: { url: string, title: string, price?: string }[] = [];
+  alternativeLinks: { url: string; title: string; price?: string }[] = [];
   currentSearchItem = '';
-  currentPricePoint: any = null;
+  currentPricePoint: PricePoint | null = null;
+  currentSearchGiftId: string | null = null;
 
-  // Cheaper Alternatives Modal data
   showCheaperAlternativesModal = false;
   loadingCheaperAlternatives = false;
   cheaperAlternatives: CheaperAlternative[] = [];
   currentProductName = '';
   currentProductOption = '';
   currentProductPrice = 0;
-  currentGiftForAlternatives: any = null;
+  currentGiftForAlternatives: Gift | null = null;
 
-  // References to modal elements for focus management
-  @ViewChild('modalContent') modalContent!: ElementRef;
-  @ViewChild('closeButton') closeButton!: ElementRef;
+  @ViewChild('modalContent') modalContent?: ElementRef<HTMLElement>;
+  @ViewChild('editorPanel') editorPanel?: ElementRef<HTMLElement>;
 
-  // Store last focused element before modal opens
   private lastFocusedElement: HTMLElement | null = null;
   private modalFocusableElements: HTMLElement[] = [];
-
-  // Add after isLoadingSuggestions = false;
-  showFullAnalysis = false;
-  expandedSuggestions: boolean[] = [];
+  private feedbackTimeout: number | null = null;
 
   constructor(
-    private giftService: GiftService,
-    private giftAiService: GiftAiService,
-    private fb: FormBuilder,
-    private authService: AuthService,
-    private router: Router
+    private readonly giftService: GiftService,
+    private readonly giftAiService: GiftAiService,
+    private readonly fb: FormBuilder,
+    private readonly authService: AuthService,
+    private readonly destroyRef: DestroyRef
   ) {
     this.giftForm = this.createGiftForm();
   }
 
   ngOnInit(): void {
     this.loadGifts();
-    
-    // Subscribe to authentication changes
-    this.authService.isAuthenticated$.subscribe(
-      isAuth => this.isAuthenticated = isAuth
-    );
+    this.authService.isAuthenticated$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(isAuthenticated => {
+        this.isAuthenticated = isAuthenticated;
+      });
   }
 
   ngOnDestroy(): void {
-    // Remove any event listeners
-    document.removeEventListener('keydown', this.handleTabKey);
+    document.removeEventListener('keydown', this.handleModalKeydown);
+    if (this.feedbackTimeout !== null) {
+      window.clearTimeout(this.feedbackTimeout);
+    }
   }
 
-  // Chargement des cadeaux depuis l'API
-  loadGifts(): void {
-    this.isLoading = true;
-    this.giftService.getGifts().subscribe({
-      next: (data) => {
-        this.gifts = data;
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Erreur lors du chargement des cadeaux:', error);
-        this.isLoading = false;
-      }
-    });
-  }
-
-  // Création du formulaire pour les cadeaux
-  createGiftForm(): FormGroup {
-    return this.fb.group({
-      name: ['', [Validators.required]],
-      description: [''],
-      pricePoints: this.fb.array([])
-    });
-  }
-
-  // Getter pour accéder facilement au FormArray des price points
   get pricePointsArray(): FormArray {
     return this.giftForm.get('pricePoints') as FormArray;
   }
 
-  // Ajouter un nouveau price point au formulaire
-  addPricePoint(): void {
-    const pricePointForm = this.fb.group({
-      label: ['', Validators.required],
-      price: [0, [Validators.required, Validators.min(0)]],
-      link: ['', Validators.required]
-    });
-    
-    this.pricePointsArray.push(pricePointForm);
+  get totalOptions(): number {
+    return this.gifts.reduce((total, gift) => total + gift.pricePoints.length, 0);
   }
 
-  // Supprimer un price point du formulaire
+  get hasActiveFilters(): boolean {
+    return Boolean(this.searchQuery.trim()) || this.budgetFilter !== 'all';
+  }
+
+  get filteredGifts(): Gift[] {
+    const query = this.normalizeSearchText(this.searchQuery);
+
+    return this.gifts.filter(gift => {
+      const searchableText = this.normalizeSearchText([
+        gift.name,
+        gift.description || '',
+        ...gift.pricePoints.map(point => point.label)
+      ].join(' '));
+      const matchesSearch = !query || searchableText.includes(query);
+      const prices = gift.pricePoints
+        .map(point => Number(point.price))
+        .filter(price => Number.isFinite(price));
+
+      const matchesBudget = this.budgetFilter === 'all'
+        || (this.budgetFilter === 'under-50' && prices.some(price => price < 50))
+        || (this.budgetFilter === '50-100' && prices.some(price => price >= 50 && price <= 100))
+        || (this.budgetFilter === 'over-100' && prices.some(price => price > 100));
+
+      return matchesSearch && matchesBudget;
+    });
+  }
+
+  loadGifts(successMessage = ''): void {
+    this.isLoading = true;
+    this.loadError = '';
+
+    this.giftService.getGifts()
+      .pipe(finalize(() => {
+        this.isLoading = false;
+      }))
+      .subscribe({
+        next: data => {
+          const gifts = Array.isArray(data) ? data : [];
+          this.gifts = gifts.map((gift, index) => this.normalizeGift(gift, index));
+          if (successMessage) {
+            this.showSuccess(successMessage);
+          }
+        },
+        error: () => {
+          this.loadError = 'La liste est momentanément indisponible. Vérifiez la connexion au serveur puis réessayez.';
+        }
+      });
+  }
+
+  createGiftForm(withInitialOption = true): FormGroup {
+    const form = this.fb.group({
+      name: ['', [Validators.required, Validators.maxLength(120)]],
+      description: ['', Validators.maxLength(500)],
+      pricePoints: this.fb.array([], Validators.minLength(1))
+    });
+
+    if (withInitialOption) {
+      (form.get('pricePoints') as FormArray).push(this.createPricePointForm());
+    }
+
+    return form;
+  }
+
+  private createPricePointForm(point?: Partial<PricePoint>): FormGroup {
+    return this.fb.group({
+      label: [point?.label || '', [Validators.required, Validators.maxLength(80)]],
+      price: [point?.price ?? null, [Validators.required, Validators.min(0)]],
+      link: [point?.link || '', Validators.required]
+    });
+  }
+
+  addPricePoint(): void {
+    this.pricePointsArray.push(this.createPricePointForm());
+  }
+
   removePricePoint(index: number): void {
+    if (this.pricePointsArray.length === 1) {
+      this.actionError = 'Un cadeau doit conserver au moins une option.';
+      return;
+    }
     this.pricePointsArray.removeAt(index);
   }
 
-  // Soumettre le formulaire (ajouter ou modifier un cadeau)
   onSubmit(): void {
+    this.clearFeedback();
     if (this.giftForm.invalid) {
+      this.giftForm.markAllAsTouched();
+      this.actionError = 'Complétez le nom et chaque option avant d’enregistrer.';
       return;
     }
 
-    const giftData = this.giftForm.value;
-    
-    // Trier les price points par prix
-    giftData.pricePoints.sort((a: any, b: any) => a.price - b.price);
+    const rawValue = this.giftForm.getRawValue();
+    const pricePoints: PricePoint[] = rawValue.pricePoints.map((point: PricePoint) => ({
+      label: String(point.label).trim(),
+      price: Number(point.price),
+      link: this.safeGiftUrl(point.link) || ''
+    }));
 
-    if (this.editMode && this.currentGiftId) {
-      // Mise à jour d'un cadeau existant
-      this.giftService.updateGift(this.currentGiftId, giftData).subscribe({
-        next: () => {
-          this.resetForm();
-          this.loadGifts();
-        },
-        error: (error) => console.error('Erreur lors de la mise à jour du cadeau:', error)
-      });
-    } else {
-      // Ajout d'un nouveau cadeau
-      this.giftService.addGift(giftData).subscribe({
-        next: () => {
-          this.resetForm();
-          this.loadGifts();
-        },
-        error: (error) => console.error('Erreur lors de l\'ajout du cadeau:', error)
-      });
+    if (pricePoints.some(point => !point.link)) {
+      this.actionError = 'Chaque lien doit être une adresse web valide.';
+      return;
     }
+
+    pricePoints.sort((first, second) => first.price - second.price);
+    const existingGift = this.gifts.find(gift => gift.id === this.currentGiftId);
+    const giftData = {
+      name: String(rawValue.name).trim(),
+      description: String(rawValue.description || '').trim(),
+      priority: existingGift?.priority ?? this.gifts.length,
+      pricePoints
+    };
+
+    this.isSaving = true;
+    const request = this.editMode && this.currentGiftId
+      ? this.giftService.updateGift(this.currentGiftId, giftData)
+      : this.giftService.addGift(giftData);
+    const successMessage = this.editMode ? 'Le cadeau a bien été mis à jour.' : 'Le cadeau a rejoint la liste.';
+
+    request.pipe(finalize(() => {
+      this.isSaving = false;
+    })).subscribe({
+      next: () => {
+        this.resetForm();
+        this.loadGifts(successMessage);
+      },
+      error: () => {
+        this.actionError = 'Impossible d’enregistrer ce cadeau pour le moment.';
+      }
+    });
   }
 
-  // Réinitialiser le formulaire
   resetForm(): void {
     this.giftForm = this.createGiftForm();
     this.editMode = false;
     this.currentGiftId = null;
+    this.clearFeedback();
   }
 
-  // Modifier un cadeau existant
-  editGift(gift: any): void {
+  editGift(gift: Gift): void {
+    this.adminPanel = 'gift';
     this.editMode = true;
     this.currentGiftId = gift.id;
-    
-    // Réinitialiser le formulaire
-    this.giftForm = this.createGiftForm();
-    
-    // Pré-remplir le formulaire avec les données du cadeau
+    this.giftForm = this.createGiftForm(false);
     this.giftForm.patchValue({
       name: gift.name,
-      description: gift.description
+      description: gift.description || ''
     });
 
-    // Ajouter les price points existants
-    this.pricePointsArray.clear();
-    
-    gift.pricePoints.forEach((point: any) => {
-      this.pricePointsArray.push(
-        this.fb.group({
-          label: [point.label, Validators.required],
-          price: [point.price, [Validators.required, Validators.min(0)]],
-          link: [point.link, Validators.required]
-        })
-      );
+    const pricePoints = gift.pricePoints.length ? gift.pricePoints : [{}];
+    pricePoints.forEach(point => {
+      this.pricePointsArray.push(this.createPricePointForm(point));
+    });
+
+    window.setTimeout(() => {
+      this.editorPanel?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
 
-  // Supprimer un cadeau
   deleteGift(id: string): void {
-    if (!id) {
-      console.error('Erreur: ID du cadeau non défini');
+    if (!id || !window.confirm('Supprimer définitivement ce cadeau de la liste ?')) {
       return;
     }
-    
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce cadeau ?')) {
-      console.log('Suppression du cadeau avec ID:', id);
-      this.giftService.deleteGift(id).subscribe({
-        next: (response) => {
-          console.log('Cadeau supprimé avec succès:', response);
-          this.loadGifts();
+
+    this.clearFeedback();
+    this.giftService.deleteGift(id).subscribe({
+      next: () => this.loadGifts('Le cadeau a été supprimé.'),
+      error: () => {
+        this.actionError = 'La suppression a échoué. Réessayez dans un instant.';
+      }
+    });
+  }
+
+  moveGiftPosition(currentIndex: number, direction: 'up' | 'down'): void {
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= this.gifts.length || this.hasActiveFilters || this.isReordering) {
+      return;
+    }
+
+    const previousOrder = [...this.gifts];
+    moveItemInArray(this.gifts, currentIndex, newIndex);
+    this.persistGiftPriorities(previousOrder);
+  }
+
+  drop(event: CdkDragDrop<Gift[]>): void {
+    if (event.previousIndex === event.currentIndex || this.hasActiveFilters || this.isReordering) {
+      return;
+    }
+
+    const previousOrder = [...this.gifts];
+    moveItemInArray(this.gifts, event.previousIndex, event.currentIndex);
+    this.persistGiftPriorities(previousOrder);
+  }
+
+  private persistGiftPriorities(previousOrder: Gift[]): void {
+    const priorities = this.gifts.map((gift, priority) => ({ id: gift.id, priority }));
+    this.isReordering = true;
+    this.clearFeedback();
+
+    this.giftService.reorderGifts(priorities)
+      .pipe(finalize(() => {
+        this.isReordering = false;
+      }))
+      .subscribe({
+        next: () => {
+          this.gifts = this.gifts.map((gift, priority) => ({ ...gift, priority }));
+          this.showSuccess('Le nouvel ordre a été enregistré.');
         },
-        error: (error) => {
-          console.error('Erreur lors de la suppression du cadeau:', error);
-          alert('Erreur lors de la suppression du cadeau. Veuillez réessayer.');
+        error: () => {
+          this.gifts = previousOrder;
+          this.actionError = 'Le nouvel ordre n’a pas pu être enregistré.';
         }
       });
+  }
+
+  setBudgetFilter(filter: BudgetFilter): void {
+    this.budgetFilter = filter;
+  }
+
+  clearFilters(): void {
+    this.searchQuery = '';
+    this.budgetFilter = 'all';
+  }
+
+  selectAdminPanel(panel: AdminPanel): void {
+    this.adminPanel = panel;
+    this.clearFeedback();
+  }
+
+  getGiftPriceLabel(gift: Gift): string {
+    const prices = gift.pricePoints
+      .map(point => Number(point.price))
+      .filter(price => Number.isFinite(price));
+    if (!prices.length) {
+      return 'Prix à préciser';
+    }
+
+    const minimum = Math.min(...prices);
+    const maximum = Math.max(...prices);
+    return minimum === maximum ? `${minimum} €` : `${minimum}–${maximum} €`;
+  }
+
+  trackByGiftId(_index: number, gift: Gift): string {
+    return gift.id;
+  }
+
+  async shareList(): Promise<void> {
+    const shareData = {
+      title: 'Ma liste de souhaits',
+      text: 'Voici ma liste de souhaits pour trouver le cadeau juste.',
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        this.shareLabel = 'Liste partagée';
+      } else {
+        await this.copyText(shareData.url);
+        this.shareLabel = 'Lien copié !';
+      }
+      this.resetShareLabel();
+    } catch (error) {
+      if ((error as DOMException)?.name !== 'AbortError') {
+        this.actionError = 'Impossible de copier le lien automatiquement.';
+      }
     }
   }
 
-  /**
-   * Updates the priorities of all gifts based on their current order
-   */
-  private updateGiftPriorities(): void {
-    this.gifts.forEach((gift, index) => {
-      const updatedGift = { ...gift, priority: index };
-      this.giftService.updateGift(gift.id, updatedGift).subscribe({
-        error: (error) => console.error(`Erreur lors de la mise à jour de la priorité pour ${gift.name}:`, error)
-      });
-    });
-  }
-  
-  /**
-   * Moves a gift up or down in the priority list
-   * @param gift The gift to move
-   * @param currentIndex The current index of the gift
-   * @param direction The direction to move ('up' or 'down')
-   */
-  moveGiftPosition(gift: any, currentIndex: number, direction: 'up' | 'down'): void {
-    // Calculate new index based on direction
-    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    
-    // Ensure the new index is within bounds
-    if (newIndex < 0 || newIndex >= this.gifts.length) {
+  private async copyText(value: string): Promise<void> {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(value);
       return;
     }
-    
-    // Reorder the gifts array
-    moveItemInArray(this.gifts, currentIndex, newIndex);
-    
-    // Update the priorities on the backend
-    this.updateGiftPriorities();
+
+    const textArea = document.createElement('textarea');
+    textArea.value = value;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.select();
+    const copied = document.execCommand('copy');
+    textArea.remove();
+    if (!copied) {
+      throw new Error('Copy failed');
+    }
   }
-  
-  /**
-   * Handle drag and drop reordering of gifts
-   */
-  drop(event: CdkDragDrop<string[]>): void {
-    moveItemInArray(this.gifts, event.previousIndex, event.currentIndex);
-    
-    // Update priorities on the backend
-    this.updateGiftPriorities();
+
+  private resetShareLabel(): void {
+    window.setTimeout(() => {
+      this.shareLabel = 'Partager la liste';
+    }, 2200);
   }
-  
-  // Générer des suggestions d'IA avec préférences
+
   generateAiSuggestions(): void {
     if (!this.aiPrompt.trim()) {
       return;
     }
-    
-    // Reset reasoning info
+
+    this.clearFeedback();
     this.resetAiReasoning();
-    
-    // Build a more detailed prompt with preferences
-    let enhancedPrompt = this.aiPrompt;
-    
-    // Add price range preference
-    enhancedPrompt += `. Budget entre ${this.aiMinPrice}€ et ${this.aiMaxPrice}€.`;
-    
-    // Add likes and dislikes if provided
-    if (this.aiPreferences?.trim()) {
-      enhancedPrompt += ` J'aime: ${this.aiPreferences}.`;
+    const minimum = Math.min(this.aiMinPrice, this.aiMaxPrice);
+    const maximum = Math.max(this.aiMinPrice, this.aiMaxPrice);
+    this.aiMinPrice = minimum;
+    this.aiMaxPrice = maximum;
+    let enhancedPrompt = `${this.aiPrompt.trim()}. Budget entre ${minimum}€ et ${maximum}€.`;
+
+    if (this.aiPreferences.trim()) {
+      enhancedPrompt += ` J’aime : ${this.aiPreferences.trim()}.`;
     }
-    
-    if (this.aiDislikes?.trim()) {
-      enhancedPrompt += ` Je n'aime pas: ${this.aiDislikes}.`;
+    if (this.aiDislikes.trim()) {
+      enhancedPrompt += ` Je n’aime pas : ${this.aiDislikes.trim()}.`;
     }
-    
-    // Si une catégorie spécifique est sélectionnée, utiliser la méthode dédiée
+
     if (this.selectedCategory) {
       this.generateCategorySpecificSuggestions(enhancedPrompt);
-    } else {
-      this.isLoadingAi = true;
-      
-      // Passer la liste des cadeaux existants à l'IA pour une personnalisation améliorée
-      this.giftAiService.generateGiftSuggestions(enhancedPrompt, this.gifts).subscribe({
-        next: (data) => {
-          this.aiSuggestions = data.suggestions || [];
-          
-          // Stocker les informations de raisonnement de l'IA
-          this.aiAnalysisIntro = data.analysisIntro || '';
-          this.aiAnalysisMethod = data.analysisMethod || '';
-          this.aiIdentifiedInterests = data.identifiedInterests || [];
+      return;
+    }
+
+    this.isLoadingAi = true;
+    this.giftAiService.generateGiftSuggestions(enhancedPrompt, this.gifts)
+      .pipe(finalize(() => {
+        this.isLoadingAi = false;
+      }))
+      .subscribe({
+        next: data => {
+          this.aiSuggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
+          this.aiAnalysisIntro = data?.analysisIntro || '';
+          this.aiAnalysisMethod = data?.analysisMethod || '';
+          this.aiIdentifiedInterests = Array.isArray(data?.identifiedInterests) ? data.identifiedInterests : [];
           this.showAiReasoning = true;
-          
-          this.isLoadingAi = false;
-          
-          // Charger automatiquement les suggestions de catégories à explorer
           if (this.gifts.length > 0) {
             this.loadCategorySuggestions();
           }
         },
-        error: (error) => {
-          console.error('Erreur lors de la génération de suggestions:', error);
-          this.isLoadingAi = false;
+        error: () => {
+          this.actionError = 'L’atelier IA n’a pas répondu. Vérifiez sa configuration puis réessayez.';
         }
       });
-    }
   }
-  
-  /**
-   * Réinitialise les informations de raisonnement de l'IA
-   */
+
   resetAiReasoning(): void {
     this.aiAnalysisIntro = '';
     this.aiAnalysisMethod = '';
@@ -360,398 +495,301 @@ export class GiftListComponent implements OnInit, OnDestroy {
     this.showFullAnalysis = false;
     this.expandedSuggestions = [];
   }
-  
-  /**
-   * Charge les suggestions de catégories à explorer
-   */
+
   loadCategorySuggestions(): void {
     this.isLoadingSuggestions = true;
     this.showCategorySuggestions = true;
-    
-    this.giftAiService.suggestCategoriesToExplore(this.gifts).subscribe({
-      next: (data) => {
-        this.suggestedCategories = data.suggestedCategories || [];
-        this.categoryAnalysisExplanation = data.analysisExplanation || '';
-        this.aiInterestPatterns = data.interestPatterns || '';
+    this.giftAiService.suggestCategoriesToExplore(this.gifts)
+      .pipe(finalize(() => {
         this.isLoadingSuggestions = false;
-      },
-      error: (error) => {
-        console.error('Erreur lors du chargement des suggestions de catégories:', error);
-        this.isLoadingSuggestions = false;
-      }
-    });
+      }))
+      .subscribe({
+        next: data => {
+          this.suggestedCategories = Array.isArray(data?.suggestedCategories) ? data.suggestedCategories : [];
+          this.categoryAnalysisExplanation = data?.analysisExplanation || '';
+          this.aiInterestPatterns = data?.interestPatterns || '';
+        },
+        error: () => {
+          this.actionError = 'Les catégories complémentaires n’ont pas pu être générées.';
+        }
+      });
   }
-  
-  /**
-   * Génère des suggestions basées sur une catégorie spécifique
-   */
+
   generateCategorySpecificSuggestions(prompt: string): void {
     this.isLoadingAi = true;
-    
-    this.giftAiService.generateCategorySpecificSuggestions(
-      prompt, 
-      this.selectedCategory, 
-      this.gifts
-    ).subscribe({
-      next: (data) => {
-        this.aiSuggestions = data.suggestions || [];
+    this.giftAiService.generateCategorySpecificSuggestions(prompt, this.selectedCategory, this.gifts)
+      .pipe(finalize(() => {
         this.isLoadingAi = false;
-      },
-      error: (error) => {
-        console.error('Erreur lors de la génération de suggestions par catégorie:', error);
-        this.isLoadingAi = false;
-      }
-    });
+      }))
+      .subscribe({
+        next: data => {
+          this.aiSuggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
+        },
+        error: () => {
+          this.actionError = 'Aucune suggestion n’a pu être générée dans cette catégorie.';
+        }
+      });
   }
-  
-  /**
-   * Sélectionne une catégorie à explorer
-   */
+
   selectCategory(categoryName: string): void {
     this.selectedCategory = categoryName;
-    
-    // Générer automatiquement des suggestions dans cette catégorie
-    // si un prompt est déjà saisi
     if (this.aiPrompt.trim()) {
-      // Construire le prompt enrichi
-      let enhancedPrompt = this.aiPrompt;
-      enhancedPrompt += `. Budget entre ${this.aiMinPrice}€ et ${this.aiMaxPrice}€.`;
-      
-      if (this.aiPreferences?.trim()) {
-        enhancedPrompt += ` J'aime: ${this.aiPreferences}.`;
-      }
-      
-      if (this.aiDislikes?.trim()) {
-        enhancedPrompt += ` Je n'aime pas: ${this.aiDislikes}.`;
-      }
-      
-      this.generateCategorySpecificSuggestions(enhancedPrompt);
+      this.generateAiSuggestions();
     }
   }
-  
-  /**
-   * Réinitialise la sélection de catégorie
-   */
+
   resetCategorySelection(): void {
     this.selectedCategory = '';
   }
 
-  // Ajouter une suggestion d'IA à la liste
   addAiSuggestion(suggestion: any): void {
     const giftData = {
-      name: suggestion.name,
-      description: suggestion.description,
-      pricePoints: suggestion.pricePoints
+      name: suggestion?.name,
+      description: suggestion?.description || '',
+      pricePoints: Array.isArray(suggestion?.pricePoints) ? suggestion.pricePoints : [],
+      priority: this.gifts.length
     };
-    
+
     this.giftService.addGift(giftData).subscribe({
-      next: () => {
-        this.loadGifts();
-      },
-      error: (error) => console.error('Erreur lors de l\'ajout de la suggestion:', error)
+      next: () => this.loadGifts('La suggestion a été ajoutée à la liste.'),
+      error: () => {
+        this.actionError = 'La suggestion n’a pas pu être ajoutée.';
+      }
     });
   }
 
-  // Exporter la liste au format JSON
   exportList(): void {
     this.giftService.exportGifts().subscribe({
-      next: (data) => {
-        this.giftService.downloadGiftsAsJson(data);
-      },
-      error: (error) => console.error('Erreur lors de l\'exportation de la liste:', error)
+      next: data => this.giftService.downloadGiftsAsJson(data),
+      error: () => {
+        this.actionError = 'L’export de la liste a échoué.';
+      }
     });
   }
 
-  // Importer une liste existante
   importExistingList(): void {
     if (!this.existingListText.trim()) {
       return;
     }
 
+    this.clearFeedback();
     this.isImportingList = true;
     this.giftAiService.importExistingGiftList(this.existingListText).subscribe({
-      next: (data) => {
-        const suggestions = data.suggestions || [];
-        
-        // Ajouter chaque cadeau de la liste importée
-        if (suggestions.length > 0) {
-          let addedCount = 0;
-          
-          const addNextGift = (index: number) => {
-            if (index >= suggestions.length) {
-              this.isImportingList = false;
-              this.existingListText = '';
-              this.loadGifts();
-              return;
-            }
-            
-            const gift = suggestions[index];
-            this.giftService.addGift(gift).subscribe({
-              next: () => {
-                addedCount++;
-                addNextGift(index + 1);
-              },
-              error: (error) => {
-                console.error(`Erreur lors de l'ajout du cadeau ${gift.name}:`, error);
-                addNextGift(index + 1);
-              }
-            });
-          };
-          
-          // Démarrer l'ajout séquentiel
-          addNextGift(0);
-        } else {
+      next: data => {
+        const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
+        if (!suggestions.length) {
           this.isImportingList = false;
-          console.warn('Aucun cadeau trouvé dans la liste importée');
+          this.actionError = 'Aucun cadeau exploitable n’a été trouvé dans ce texte.';
+          return;
         }
+
+        let addedCount = 0;
+        let failedCount = 0;
+        const addNextGift = (index: number): void => {
+          if (index >= suggestions.length) {
+            this.isImportingList = false;
+            this.existingListText = '';
+            const message = `${addedCount} cadeau${addedCount > 1 ? 'x' : ''} importé${addedCount > 1 ? 's' : ''}.`;
+            this.loadGifts(message);
+            if (failedCount) {
+              this.actionError = `${failedCount} élément${failedCount > 1 ? 's' : ''} n’ont pas pu être importés.`;
+            }
+            return;
+          }
+
+          const gift = { ...suggestions[index], priority: this.gifts.length + index };
+          this.giftService.addGift(gift).subscribe({
+            next: () => {
+              addedCount += 1;
+              addNextGift(index + 1);
+            },
+            error: () => {
+              failedCount += 1;
+              addNextGift(index + 1);
+            }
+          });
+        };
+
+        addNextGift(0);
       },
-      error: (error) => {
-        console.error('Erreur lors de l\'importation de la liste:', error);
+      error: () => {
         this.isImportingList = false;
+        this.actionError = 'La liste n’a pas pu être analysée par l’IA.';
       }
     });
   }
 
-  // Find alternative links for a gift
-  findAlternativeLink(giftName: string, pricePoint: any): void {
-    // Store current focused element
+  findAlternativeLink(gift: Gift, pricePoint: PricePoint): void {
     this.lastFocusedElement = document.activeElement as HTMLElement;
-    
-    this.currentSearchItem = giftName + ' ' + pricePoint.label;
+    this.currentSearchItem = `${gift.name} ${pricePoint.label}`;
     this.currentPricePoint = pricePoint;
+    this.currentSearchGiftId = gift.id;
     this.alternativeLinks = [];
     this.searchingForLinks = true;
     this.showFindLinkModal = true;
-    this.currentGiftId = this.editMode ? this.currentGiftId : null;
-    
-    // Focus the modal after it becomes visible and setup keyboard trap
-    setTimeout(() => {
-      if (this.modalContent && this.modalContent.nativeElement) {
-        this.modalContent.nativeElement.focus();
-        this.setupModalFocusTrap();
-      }
+
+    window.setTimeout(() => {
+      this.modalContent?.nativeElement.focus();
+      this.setupModalFocusTrap();
     });
-    
-    // Use AI to find a verified working product link
-    this.giftAiService.findProductLinks(giftName, pricePoint).subscribe({
-      next: (data) => {
-        if (data && data.links && data.links.length > 0) {
-          // Transform the link data to include site name in the title if available
-          this.alternativeLinks = data.links.map((link: any) => {
-            let enrichedTitle = link.title;
-            if (link.site) {
-              enrichedTitle = `${link.title} (${link.site})`;
-            }
-            return {
-              title: enrichedTitle,
+
+    this.giftAiService.findProductLinks(gift.name, pricePoint)
+      .pipe(finalize(() => {
+        this.searchingForLinks = false;
+      }))
+      .subscribe({
+        next: data => {
+          if (Array.isArray(data?.links) && data.links.length > 0) {
+            this.alternativeLinks = data.links.map((link: any) => ({
+              title: link.site ? `${link.title} · ${link.site}` : link.title,
               price: link.price || 'Prix non disponible',
               url: link.url
-            };
-          });
-          
-          // If we found a working link, offer to use it immediately
-          if (this.alternativeLinks.length === 1 && this.currentGiftId && this.currentPricePoint) {
-    setTimeout(() => {
-              if (confirm(`Un lien fonctionnel a été trouvé pour "${giftName}".\nVoulez-vous l'ajouter automatiquement à votre liste?`)) {
-                this.updateGiftLink(this.alternativeLinks[0].url);
-              }
-            }, 500);
+            }));
+          } else {
+            this.generateFallbackSearchLinks(this.currentSearchItem);
           }
-        } else {
-          // Fallback to search links if AI doesn't return specific products
-          this.generateFallbackSearchLinks(this.currentSearchItem);
-        }
-        this.searchingForLinks = false;
-      },
-      error: (error) => {
-        console.error('Erreur lors de la recherche de liens:', error);
-        // Fallback to search links in case of error
-        this.generateFallbackSearchLinks(this.currentSearchItem);
-        this.searchingForLinks = false;
-      }
-    });
+        },
+        error: () => this.generateFallbackSearchLinks(this.currentSearchItem)
+      });
   }
-  
-  // Generate fallback search links when AI can't find specific products
+
   private generateFallbackSearchLinks(searchTerm: string): void {
     const searchQuery = encodeURIComponent(searchTerm);
-      this.alternativeLinks = [
-        {
-          url: 'https://www.amazon.fr/s?k=' + searchQuery,
-          title: 'Rechercher sur Amazon',
-          price: 'Prix variables'
-        },
-        {
-          url: 'https://www.fnac.com/SearchResult/ResultList.aspx?Search=' + searchQuery,
-          title: 'Rechercher sur Fnac',
-          price: 'Prix variables'
-        },
-        {
-          url: 'https://www.cdiscount.com/search/10/' + searchQuery + '.html',
-          title: 'Rechercher sur Cdiscount',
-          price: 'Prix variables'
-        },
-        {
-          url: 'https://www.darty.com/nav/recherche?text=' + searchQuery,
-          title: 'Rechercher sur Darty',
-          price: 'Prix variables'
-        }
-      ];
+    this.alternativeLinks = [
+      { url: `https://www.amazon.fr/s?k=${searchQuery}`, title: 'Rechercher sur Amazon', price: 'Prix variables' },
+      { url: `https://www.fnac.com/SearchResult/ResultList.aspx?Search=${searchQuery}`, title: 'Rechercher sur Fnac', price: 'Prix variables' },
+      { url: `https://www.cdiscount.com/search/10/${searchQuery}.html`, title: 'Rechercher sur Cdiscount', price: 'Prix variables' },
+      { url: `https://www.darty.com/nav/recherche?text=${searchQuery}`, title: 'Rechercher sur Darty', price: 'Prix variables' }
+    ];
   }
 
-  // Setup keyboard trap for the modal
   private setupModalFocusTrap(): void {
-    if (!this.modalContent) return;
-    
-    // Get all focusable elements in the modal
-    const modal = this.modalContent.nativeElement;
-    this.modalFocusableElements = Array.from(
-      modal.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      )
-    ) as HTMLElement[];
-    
-    // Setup keyboard event to trap focus within modal
-    document.addEventListener('keydown', this.handleTabKey);
+    const modal = this.modalContent?.nativeElement;
+    if (!modal) {
+      return;
+    }
+    this.modalFocusableElements = Array.from(modal.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    ));
+    document.addEventListener('keydown', this.handleModalKeydown);
   }
 
-  // Handle tab key to keep focus within modal
-  private handleTabKey = (e: KeyboardEvent): void => {
-    if (!this.showFindLinkModal || this.modalFocusableElements.length === 0) return;
-    
-    // If Tab key is pressed
-    if (e.key === 'Tab') {
-      const firstFocusableEl = this.modalFocusableElements[0];
-      const lastFocusableEl = this.modalFocusableElements[this.modalFocusableElements.length - 1];
-      
-      // If shift key is pressed with Tab (moving backwards)
-      if (e.shiftKey) {
-        if (document.activeElement === firstFocusableEl) {
-          lastFocusableEl.focus();
-          e.preventDefault();
-        }
-      } else {
-        // Tab without shift (moving forwards)
-        if (document.activeElement === lastFocusableEl) {
-          firstFocusableEl.focus();
-          e.preventDefault();
-        }
-      }
+  private handleModalKeydown = (event: KeyboardEvent): void => {
+    if (!this.showFindLinkModal) {
+      return;
     }
-    
-    // Only close modal when Escape key is pressed if we want to enable this behavior
-    // Commenting out to make modal only close via close button
-    // if (e.key === 'Escape') {
-    //   this.closeFindLinkModal();
-    // }
+    if (event.key === 'Escape') {
+      this.closeFindLinkModal();
+      return;
+    }
+    if (event.key !== 'Tab' || !this.modalFocusableElements.length) {
+      return;
+    }
+
+    const firstElement = this.modalFocusableElements[0];
+    const lastElement = this.modalFocusableElements[this.modalFocusableElements.length - 1];
+    if (event.shiftKey && document.activeElement === firstElement) {
+      lastElement.focus();
+      event.preventDefault();
+    } else if (!event.shiftKey && document.activeElement === lastElement) {
+      firstElement.focus();
+      event.preventDefault();
+    }
   };
 
-  // Close the find link modal
   closeFindLinkModal(): void {
     this.showFindLinkModal = false;
     this.alternativeLinks = [];
     this.currentSearchItem = '';
     this.currentPricePoint = null;
-    
-    // Remove keyboard event listener
-    document.removeEventListener('keydown', this.handleTabKey);
-    
-    // Restore focus to the previously focused element
-    setTimeout(() => {
-      if (this.lastFocusedElement) {
-        this.lastFocusedElement.focus();
-        this.lastFocusedElement = null;
+    this.currentSearchGiftId = null;
+    document.removeEventListener('keydown', this.handleModalKeydown);
+
+    window.setTimeout(() => {
+      this.lastFocusedElement?.focus();
+      this.lastFocusedElement = null;
+    });
+  }
+
+  updateGiftLink(linkUrl: string): void {
+    const validUrl = this.safeGiftUrl(linkUrl);
+    if (!validUrl) {
+      this.actionError = 'Le lien proposé n’est pas une adresse valide.';
+      return;
+    }
+
+    if (!this.currentPricePoint || !this.currentSearchGiftId) {
+      window.open(validUrl, '_blank', 'noopener,noreferrer');
+      this.closeFindLinkModal();
+      return;
+    }
+
+    const giftToUpdate = this.gifts.find(gift => gift.id === this.currentSearchGiftId);
+    if (!giftToUpdate) {
+      this.actionError = 'Le cadeau à mettre à jour est introuvable.';
+      this.closeFindLinkModal();
+      return;
+    }
+
+    const pricePoints = giftToUpdate.pricePoints.map(point => (
+      point.label === this.currentPricePoint?.label && point.price === this.currentPricePoint?.price
+        ? { ...point, link: validUrl }
+        : { ...point }
+    ));
+    const updatedGift = { ...giftToUpdate, pricePoints };
+
+    this.giftService.updateGift(giftToUpdate.id, updatedGift).subscribe({
+      next: () => {
+        this.closeFindLinkModal();
+        this.loadGifts('Le lien de l’option a été mis à jour.');
+      },
+      error: () => {
+        this.actionError = 'Le nouveau lien n’a pas pu être enregistré.';
       }
     });
   }
 
-  // Update gift link with the selected alternative
-  updateGiftLink(linkUrl: string): void {
-    if (this.currentPricePoint && this.currentGiftId) {
-      // Find the gift and price point to update
-      const giftToUpdate = this.gifts.find(g => g.id === this.currentGiftId);
-      if (giftToUpdate) {
-        const pricePointToUpdate = giftToUpdate.pricePoints.find(
-          (p: any) => p.label === this.currentPricePoint.label && 
-                      p.price === this.currentPricePoint.price
-        );
-        
-        if (pricePointToUpdate) {
-          pricePointToUpdate.link = linkUrl;
-          
-          // Update in the database
-          this.giftService.updateGift(this.currentGiftId, giftToUpdate).subscribe({
-            next: () => {
-              this.closeFindLinkModal();
-              this.loadGifts();
-              alert('Lien mis à jour avec succès !');
-            },
-            error: (error) => {
-              console.error('Erreur lors de la mise à jour du lien:', error);
-              alert('Erreur lors de la mise à jour du lien. Veuillez réessayer.');
-            }
-          });
-        }
-      }
-    } else {
-      // Just open the link in a new tab without updating
-      const validUrl = this.ensureValidUrl(linkUrl);
-      window.open(validUrl, '_blank');
-      this.closeFindLinkModal();
+  safeGiftUrl(url?: string | null): string | null {
+    if (!url || typeof url !== 'string') {
+      return null;
+    }
+
+    try {
+      const normalizedUrl = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+      const parsedUrl = new URL(normalizedUrl);
+      return ['http:', 'https:'].includes(parsedUrl.protocol) ? parsedUrl.toString() : null;
+    } catch {
+      return null;
     }
   }
-  
-  // Ensure URL has proper protocol
-  private ensureValidUrl(url: string): string {
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      return 'https://' + url.replace(/^\/\//, '');
-    }
-    return url;
-  }
 
-  // Open link in new tab with proper URL
-  openLink(url: string): void {
-    const validUrl = this.ensureValidUrl(url);
-    window.open(validUrl, '_blank');
-  }
-
-  // Navigate to show login modal
   showLoginModal(): void {
-    // Emit an event that can be caught by app.component to show the login modal
     window.dispatchEvent(new CustomEvent('show-login-modal'));
   }
-  
-  /**
-   * Finds cheaper alternatives for an expensive product
-   * @param gift The gift containing the expensive product
-   * @param pricePoint The specific price point to find alternatives for
-   */
-  findCheaperAlternatives(gift: any, pricePoint: any): void {
+
+  findCheaperAlternatives(gift: Gift, pricePoint: PricePoint): void {
     this.currentGiftForAlternatives = gift;
     this.currentProductName = gift.name;
     this.currentProductOption = pricePoint.label;
-    this.currentProductPrice = pricePoint.price;
+    this.currentProductPrice = Number(pricePoint.price);
     this.cheaperAlternatives = [];
     this.loadingCheaperAlternatives = true;
     this.showCheaperAlternativesModal = true;
-    
-    this.giftAiService.findCheaperAlternatives(gift.name, pricePoint).subscribe({
-      next: (data) => {
-        if (data && data.alternatives) {
-          this.cheaperAlternatives = data.alternatives;
+
+    this.giftAiService.findCheaperAlternatives(gift.name, pricePoint)
+      .pipe(finalize(() => {
+        this.loadingCheaperAlternatives = false;
+      }))
+      .subscribe({
+        next: data => {
+          this.cheaperAlternatives = Array.isArray(data?.alternatives) ? data.alternatives : [];
+        },
+        error: () => {
+          this.actionError = 'La recherche d’alternatives moins chères a échoué.';
         }
-        this.loadingCheaperAlternatives = false;
-      },
-      error: (error) => {
-        console.error('Erreur lors de la recherche d\'alternatives moins chères:', error);
-        this.loadingCheaperAlternatives = false;
-      }
-    });
+      });
   }
-  
-  /**
-   * Closes the cheaper alternatives modal
-   */
+
   closeCheaperAlternativesModal(): void {
     this.showCheaperAlternativesModal = false;
     this.cheaperAlternatives = [];
@@ -760,59 +798,81 @@ export class GiftListComponent implements OnInit, OnDestroy {
     this.currentProductPrice = 0;
     this.currentGiftForAlternatives = null;
   }
-  
-  /**
-   * Adds a cheaper alternative to the gift's price points
-   * @param alternative The alternative to add
-   */
+
   addCheaperAlternative(alternative: CheaperAlternative): void {
     if (!this.currentGiftForAlternatives) {
       return;
     }
-    
-    // Add the new alternative to the gift's price points
-    const updatedGift = { ...this.currentGiftForAlternatives };
-    updatedGift.pricePoints.push({
-      label: alternative.label,
-      price: alternative.price,
-      link: alternative.link
-    });
-    
-    // Sort price points by price
-    updatedGift.pricePoints.sort((a: any, b: any) => a.price - b.price);
-    
-    // Update the gift in the database
+
+    const updatedGift: Gift = {
+      ...this.currentGiftForAlternatives,
+      pricePoints: [
+        ...this.currentGiftForAlternatives.pricePoints.map(point => ({ ...point })),
+        {
+          label: alternative.label,
+          price: Number(alternative.price),
+          link: this.safeGiftUrl(alternative.link) || alternative.link
+        }
+      ].sort((first, second) => first.price - second.price)
+    };
+
     this.giftService.updateGift(updatedGift.id, updatedGift).subscribe({
       next: () => {
         this.closeCheaperAlternativesModal();
-        this.loadGifts();
-        alert(`Option "${alternative.label}" ajoutée au cadeau "${updatedGift.name}"`);
+        this.loadGifts(`L’option « ${alternative.label} » a été ajoutée.`);
       },
-      error: (error) => {
-        console.error('Erreur lors de l\'ajout de l\'alternative:', error);
-        alert('Erreur lors de l\'ajout de l\'alternative. Veuillez réessayer.');
+      error: () => {
+        this.actionError = 'Cette alternative n’a pas pu être ajoutée.';
       }
     });
   }
 
-  /**
-   * Toggles between showing full and summarized AI analysis
-   */
   toggleFullAnalysis(): void {
     this.showFullAnalysis = !this.showFullAnalysis;
   }
-  
-  /**
-   * Toggles the expanded details for a specific suggestion
-   * @param index The index of the suggestion to toggle
-   */
+
   toggleSuggestionDetails(index: number): void {
-    // Initialize array if needed
-    if (!this.expandedSuggestions[index]) {
-      this.expandedSuggestions[index] = false;
-    }
-    
-    // Toggle the selected suggestion's expanded state
     this.expandedSuggestions[index] = !this.expandedSuggestions[index];
+  }
+
+  private normalizeGift(rawGift: any, index: number): Gift {
+    return {
+      ...rawGift,
+      id: String(rawGift?.id || index),
+      name: String(rawGift?.name || 'Cadeau sans nom'),
+      description: rawGift?.description ? String(rawGift.description) : '',
+      priority: Number.isFinite(Number(rawGift?.priority)) ? Number(rawGift.priority) : index,
+      pricePoints: Array.isArray(rawGift?.pricePoints)
+        ? rawGift.pricePoints.map((point: any) => ({
+          label: String(point?.label || 'Option'),
+          price: Number.isFinite(Number(point?.price)) ? Number(point.price) : 0,
+          link: String(point?.link || '')
+        })).sort((first: PricePoint, second: PricePoint) => first.price - second.price)
+        : []
+    };
+  }
+
+  private normalizeSearchText(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private showSuccess(message: string): void {
+    this.successMessage = message;
+    if (this.feedbackTimeout !== null) {
+      window.clearTimeout(this.feedbackTimeout);
+    }
+    this.feedbackTimeout = window.setTimeout(() => {
+      this.successMessage = '';
+      this.feedbackTimeout = null;
+    }, 3500);
+  }
+
+  private clearFeedback(): void {
+    this.actionError = '';
+    this.successMessage = '';
   }
 }

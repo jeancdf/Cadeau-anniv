@@ -1,13 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ThemeService, ThemeMode } from '../../services/theme.service';
+import { ThemeService } from '../../services/theme.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-theme-toggle',
   standalone: true,
   imports: [CommonModule],
   template: `
-    <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'Toggle ' + (isDarkTheme ? 'light' : 'dark') + ' mode'">
+    <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="isDarkTheme ? 'Activer le thème clair' : 'Activer le thème sombre'">
       <i class="bi" [ngClass]="isDarkTheme ? 'bi-sun-fill' : 'bi-moon-fill'"></i>
     </button>
   `,
@@ -16,40 +17,43 @@ import { ThemeService, ThemeMode } from '../../services/theme.service';
       border: none;
       background: transparent;
       cursor: pointer;
-      padding: 8px;
-      font-size: 1.2rem;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-size: 1rem;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.3s ease;
+      transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
     }
     
     .theme-toggle:hover {
-      background-color: rgba(128, 128, 128, 0.2);
-    }
-    
-    :host-context(.dark-theme) .theme-toggle {
-      color: #fff;
-    }
-    
-    :host-context(.light-theme) .theme-toggle {
-      color: #333;
+      border-color: var(--ink);
+      background-color: var(--surface);
+      transform: translateY(-1px);
     }
   `]
 })
 export class ThemeToggleComponent implements OnInit {
   isDarkTheme = false;
 
-  constructor(private themeService: ThemeService) {}
+  constructor(
+    private readonly themeService: ThemeService,
+    private readonly destroyRef: DestroyRef
+  ) {}
 
   ngOnInit(): void {
-    this.themeService.theme$.subscribe(theme => {
-      this.isDarkTheme = theme === 'dark';
-    });
+    this.themeService.theme$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(theme => {
+        this.isDarkTheme = theme === 'dark';
+      });
   }
 
   toggleTheme(): void {
     this.themeService.toggleTheme();
   }
-} 
+}

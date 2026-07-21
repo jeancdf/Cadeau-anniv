@@ -1,6 +1,7 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -8,146 +9,252 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="modal-backdrop" *ngIf="visible" (click)="closeOnBackdrop($event)"></div>
-    <div class="login-modal" *ngIf="visible">
-      <div class="modal-content">
-        <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title">Connexion Admin</h5>
-          <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+    <div class="login-backdrop" (click)="closeModal()"></div>
+    <div class="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title" (keydown.escape)="closeModal()">
+      <div class="login-panel" (click)="$event.stopPropagation()">
+        <header>
+          <span class="login-icon"><i class="bi bi-key" aria-hidden="true"></i></span>
+          <button type="button" (click)="closeModal()" aria-label="Fermer">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
+        </header>
+
+        <div class="login-copy">
+          <p>Espace privé</p>
+          <h2 id="login-title">Ouvrir l’atelier</h2>
+          <span>Ajoutez, classez et affinez les idées de la liste.</span>
         </div>
-        <div class="modal-body">
-          <form (ngSubmit)="onLogin()">
-            <div class="mb-3">
-              <label for="password" class="form-label">Mot de passe</label>
-              <input 
-                type="password" 
-                class="form-control" 
-                id="password" 
-                [(ngModel)]="password" 
-                name="password" 
-                placeholder="Entrez le mot de passe"
-                required
-                autofocus
-              >
-            </div>
-            <div *ngIf="loginError" class="alert alert-danger">
-              Mot de passe incorrect
-            </div>
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary">
-                <i class="bi bi-lock"></i> Se connecter
-              </button>
-            </div>
-          </form>
-        </div>
+
+        <form (ngSubmit)="onLogin()" novalidate>
+          <label for="password">Mot de passe</label>
+          <div class="password-field" [class.has-error]="loginError">
+            <i class="bi bi-lock" aria-hidden="true"></i>
+            <input
+              #passwordInput
+              type="password"
+              id="password"
+              [(ngModel)]="password"
+              name="password"
+              placeholder="Votre mot de passe"
+              autocomplete="current-password"
+              required>
+          </div>
+          <p class="login-error" *ngIf="loginError" role="alert">
+            <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+            Mot de passe incorrect. Réessayez.
+          </p>
+          <button type="submit" class="login-submit" [disabled]="isSubmitting">
+            {{ isSubmitting ? 'Vérification…' : 'Entrer dans l’atelier' }}
+            <i class="bi" [ngClass]="isSubmitting ? 'bi-hourglass-split' : 'bi-arrow-right'" aria-hidden="true"></i>
+          </button>
+        </form>
       </div>
     </div>
   `,
   styles: [`
-    .modal-backdrop {
+    .login-backdrop {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 1040;
+      z-index: 1100;
+      inset: 0;
+      background: rgba(17, 19, 16, .62);
+      backdrop-filter: blur(4px);
     }
-    
+
     .login-modal {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1050;
+      z-index: 1110;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
     }
-    
-    .modal-content {
-      width: 100%;
-      max-width: 400px;
-      background-color: var(--modal-bg, #fff);
-      color: var(--modal-color, #212529);
-      border-radius: 0.3rem;
-      box-shadow: 0 0.5rem 1rem var(--shadow-color, rgba(0, 0, 0, 0.15));
-      margin: 1.75rem;
-      animation: fadeIn 0.3s ease;
+
+    .login-panel {
+      width: min(430px, 100%);
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 1.5rem;
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 30px 100px rgba(0, 0, 0, .32);
+      animation: enter 180ms ease-out;
     }
-    
-    .modal-header {
+
+    header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 1rem;
-      border-bottom: 1px solid var(--border-color, #dee2e6);
-      border-top-left-radius: 0.3rem;
-      border-top-right-radius: 0.3rem;
     }
-    
-    .modal-body {
-      padding: 1rem;
+
+    .login-icon {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 1.1rem;
     }
-    
-    :host-context(.dark-theme) .form-label {
-      color: var(--card-color);
+
+    header button {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
     }
-    
-    :host-context(.dark-theme) .form-control {
-      background-color: var(--input-bg);
+
+    .login-copy {
+      padding: 2rem 0 1.6rem;
+    }
+
+    .login-copy p {
+      margin: 0 0 .65rem;
+      color: var(--accent);
+      font-size: .67rem;
+      font-weight: 850;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+    }
+
+    .login-copy h2 {
+      margin: 0 0 .75rem;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 2.5rem;
+      font-weight: 400;
+      letter-spacing: -.045em;
+    }
+
+    .login-copy span {
+      color: var(--muted);
+      font-size: .86rem;
+    }
+
+    form label {
+      display: block;
+      margin-bottom: .5rem;
+      color: var(--ink-soft);
+      font-size: .68rem;
+      font-weight: 800;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+
+    .password-field {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0 .9rem;
+      background: var(--input-bg);
+      color: var(--muted);
+    }
+
+    .password-field:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
+    }
+
+    .password-field.has-error {
+      border-color: var(--danger);
+    }
+
+    .password-field input {
+      width: 100%;
+      min-height: 50px;
+      border: 0;
+      outline: 0;
+      background: transparent;
       color: var(--input-color);
-      border-color: var(--input-border);
     }
-    
-    :host-context(.dark-theme) .form-control:focus {
-      background-color: var(--input-bg);
-      color: var(--input-color);
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 0.25rem rgba(var(--primary-color-rgb, 99, 102, 241), 0.25);
+
+    .login-error {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      margin: .65rem 0 0;
+      color: var(--danger);
+      font-size: .75rem;
     }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
+
+    .login-submit {
+      width: 100%;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .7rem;
+      margin-top: 1rem;
+      border: 0;
+      border-radius: 999px;
+      background: var(--ink);
+      color: var(--surface);
+      font-size: .82rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .login-submit:hover {
+      background: var(--ink-soft);
+    }
+
+    .login-submit:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+
+    @keyframes enter {
+      from { opacity: 0; transform: translateY(12px) scale(.98); }
     }
   `]
 })
-export class LoginModalComponent {
+export class LoginModalComponent implements AfterViewInit {
   @Output() modalClosed = new EventEmitter<void>();
-  
+  @ViewChild('passwordInput') passwordInput?: ElementRef<HTMLInputElement>;
+
   password = '';
   loginError = false;
-  visible = true;
+  isSubmitting = false;
 
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
-  closeOnBackdrop(event: MouseEvent): void {
-    // Only close if clicking directly on the backdrop
-    if ((event.target as HTMLElement).className === 'modal-backdrop') {
-      this.closeModal();
-    }
+  ngAfterViewInit(): void {
+    window.setTimeout(() => this.passwordInput?.nativeElement.focus());
   }
 
   closeModal(): void {
-    this.visible = false;
     this.password = '';
     this.loginError = false;
-    setTimeout(() => this.modalClosed.emit(), 100);
+    this.modalClosed.emit();
   }
 
   onLogin(): void {
-    if (this.password) {
-      const success = this.authService.login(this.password);
-      
-      if (success) {
-        this.closeModal();
-      } else {
-        this.loginError = true;
-      }
-    } else {
+    if (!this.password || this.isSubmitting) {
       this.loginError = true;
+      this.passwordInput?.nativeElement.focus();
+      return;
     }
+
+    this.loginError = false;
+    this.isSubmitting = true;
+    this.authService.login(this.password)
+      .pipe(finalize(() => {
+        this.isSubmitting = false;
+      }))
+      .subscribe(success => {
+        if (success) {
+          this.closeModal();
+        } else {
+          this.loginError = true;
+          this.passwordInput?.nativeElement.focus();
+        }
+      });
   }
-} 
+}

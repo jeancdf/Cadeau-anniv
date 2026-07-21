@@ -34,7 +34,8 @@ const syncGiftModel = async () => {
     console.log("Modèle Gift synchronisé avec la base de données");
   } catch (error) {
     console.error("Erreur lors de la synchronisation du modèle Gift:", error);
+    throw error;
   }
 };
 
-export { Gift, syncGiftModel }; 
+export { Gift, syncGiftModel };

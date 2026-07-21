@@ -1,0 +1,75 @@
+name: gift-finder
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gift_finder}
+      POSTGRES_USER: ${POSTGRES_USER:-gift_finder}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est requis}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-gift_finder}
+      DB_USER: ${POSTGRES_USER:-gift_finder}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est requis}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY est requis}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD est requis}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY est requis}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 8
+    networks:
+      - app
+
+  frontend:
+    build:
+      context: ./gift-list
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "80"
+    networks:
+      app: {}
+      proxy:
+        aliases:
+          - gift-finder-frontend
+
+volumes:
+  postgres_data:
+    name: gift-finder_postgres_data
+
+networks:
+  app:
+    name: gift-finder_app
+  proxy:
+    external: true
+    name: qr-code_app_net

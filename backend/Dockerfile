@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -6,10 +6,10 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Installer les dépendances en mode production
-RUN npm install --production
+RUN npm ci --omit=dev
 
 # Copier le reste du code source après l'installation des dépendances
-COPY . .
+COPY --chown=node:node . .
 
 # Utilisateur non-root pour plus de sécurité
 USER node
