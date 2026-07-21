@@ -25,8 +25,9 @@ jobs:
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
       SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GEMINI_MODEL: ${{ secrets.GEMINI_MODEL || 'gemini-3.5-flash' }}
+      QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      QWEN_MODEL: ${{ vars.QWEN_MODEL || 'qwen3.7-plus' }}
+      QWEN_BASE_URL: ${{ vars.QWEN_BASE_URL || 'https://dashscope-us.aliyuncs.com/compatible-mode/v1' }}
 
     steps:
       - name: Checkout
@@ -39,7 +40,7 @@ jobs:
           : "${POSTGRES_PASSWORD:?Secret POSTGRES_PASSWORD manquant}"
           : "${ADMIN_PASSWORD:?Secret ADMIN_PASSWORD manquant}"
           : "${SECRET_KEY:?Secret APP_SECRET_KEY manquant}"
-          : "${GEMINI_API_KEY:?Secret GEMINI_API_KEY manquant}"
+          : "${QWEN_API_KEY:?Secret QWEN_API_KEY manquant}"
 
           ENV_FILE="$RUNNER_TEMP/gift-finder-${GITHUB_SHA}.env"
           umask 077
@@ -49,8 +50,9 @@ jobs:
             printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD"
             printf 'SECRET_KEY=%s\n' "$SECRET_KEY"
             printf 'ADMIN_PASSWORD=%s\n' "$ADMIN_PASSWORD"
-            printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
-            printf 'GEMINI_MODEL=%s\n' "$GEMINI_MODEL"
+            printf 'QWEN_API_KEY=%s\n' "$QWEN_API_KEY"
+            printf 'QWEN_MODEL=%s\n' "$QWEN_MODEL"
+            printf 'QWEN_BASE_URL=%s\n' "$QWEN_BASE_URL"
           } > "$ENV_FILE"
           chmod 600 "$ENV_FILE"
 

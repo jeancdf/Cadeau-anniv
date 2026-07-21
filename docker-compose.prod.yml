@@ -32,8 +32,9 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est requis}
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY est requis}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD est requis}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY est requis}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash}
+      QWEN_API_KEY: ${QWEN_API_KEY:?QWEN_API_KEY est requis}
+      QWEN_MODEL: ${QWEN_MODEL:-qwen3.7-plus}
+      QWEN_BASE_URL: ${QWEN_BASE_URL:-https://dashscope-us.aliyuncs.com/compatible-mode/v1}
     depends_on:
       postgres:
         condition: service_healthy

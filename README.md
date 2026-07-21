@@ -1,6 +1,6 @@
 # Application de Liste de Cadeaux avec IA
 
-Une application web complète pour gérer des listes de cadeaux avec des suggestions d'IA via l'API Gemini.
+Une application web complète pour gérer des listes de cadeaux avec des suggestions d'IA via Qwen3.7 Plus.
 
 ## Structure du projet
 
@@ -15,7 +15,7 @@ Ce projet est organisé en monorepo avec deux dossiers principaux:
 - Gestion complète des cadeaux (ajout, modification, suppression)
 - Plusieurs niveaux de prix par cadeau
 - Réorganisation des cadeaux par priorité via drag & drop
-- Suggestions de cadeaux par IA (Gemini)
+- Suggestions de cadeaux par IA (Qwen3.7 Plus)
 - Export de la liste au format JSON
 - Recherche, filtres par budget et partage de la liste
 - Thèmes clair et sombre, interface responsive
@@ -31,7 +31,7 @@ Ce projet est organisé en monorepo avec deux dossiers principaux:
 ### Prérequis
 - Node.js (v18+)
 - PostgreSQL
-- Clé API Gemini (Google Generative AI)
+- Clé API Alibaba Cloud Model Studio
 
 ### Installation du backend
 ```bash
@@ -44,8 +44,9 @@ Configurez les variables d'environnement dans le fichier `config.env` :
 - `DATABASE_URL`: URL de connexion PostgreSQL
 - `SECRET_KEY`: Clé longue utilisée pour signer les jetons administrateur
 - `ADMIN_PASSWORD`: Mot de passe de l'espace administrateur
-- `GEMINI_API_KEY`: Clé Gemini, conservée uniquement côté serveur
-- `GEMINI_MODEL`: Modèle Gemini utilisé par le backend
+- `QWEN_API_KEY`: clé Model Studio, conservée uniquement côté serveur
+- `QWEN_MODEL`: modèle Qwen utilisé par le backend (`qwen3.7-plus` par défaut)
+- `QWEN_BASE_URL`: endpoint compatible OpenAI correspondant à la région de la clé
 - `PORT`: Port du serveur (défaut: 3000)
 
 ### Installation du frontend
@@ -96,8 +97,16 @@ Dans `Settings > Secrets and variables > Actions`, configurez :
 - `POSTGRES_PASSWORD` : mot de passe de la base interne ;
 - `APP_SECRET_KEY` : chaîne aléatoire longue pour signer les jetons ;
 - `ADMIN_PASSWORD` : mot de passe de l'espace d'administration ;
-- `GEMINI_API_KEY` : nouvelle clé Gemini ;
-- `GEMINI_MODEL` : facultatif, `gemini-3.5-flash` par défaut.
+- `QWEN_API_KEY` : clé Alibaba Cloud Model Studio créée dans la région choisie.
+
+La variable GitHub `QWEN_MODEL` est facultative (`qwen3.7-plus` par défaut). La
+variable `QWEN_BASE_URL` est également facultative et utilise l'endpoint US par
+défaut. Pour une clé créée dans la région Francfort, configurez-la avec l'URL
+compatible OpenAI affichée par Model Studio, par exemple :
+
+```text
+https://VOTRE_WORKSPACE_ID.eu-central-1.maas.aliyuncs.com/compatible-mode/v1
+```
 
 Les valeurs VPS utilisées par défaut sont `51.210.109.16`, utilisateur `deploy` et
 port `22`. Elles peuvent être surchargées avec les variables GitHub `VPS_HOST`,

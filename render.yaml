@@ -21,10 +21,12 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-      - key: GEMINI_API_KEY
+      - key: QWEN_API_KEY
         sync: false
-      - key: GEMINI_MODEL
-        value: gemini-3.5-flash
+      - key: QWEN_MODEL
+        value: qwen3.7-plus
+      - key: QWEN_BASE_URL
+        value: https://dashscope-us.aliyuncs.com/compatible-mode/v1
     autoDeploy: true
 
 databases:

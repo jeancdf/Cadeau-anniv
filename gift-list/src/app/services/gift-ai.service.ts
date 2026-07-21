@@ -15,7 +15,7 @@ export class GiftAiService {
 
   /**
    * Génère des suggestions de cadeaux basées sur un prompt
-   * @param prompt Le prompt à envoyer à Gemini
+   * @param prompt Le prompt à envoyer au fournisseur IA via le backend
    * @param existingGifts Liste des cadeaux déjà sélectionnés par l'utilisateur (optionnel)
    * @returns Une Observable contenant les suggestions de cadeaux
    */
@@ -142,7 +142,7 @@ export class GiftAiService {
         `;
       }
       
-      // Appel à l'API Gemini et conversion en Observable
+      // Appel au proxy IA du backend et conversion en Observable
       return from(this.generateContent(structuredPrompt));
     } else {
       // Si aucun cadeau existant
@@ -231,7 +231,7 @@ export class GiftAiService {
         `;
       }
       
-      // Appel à l'API Gemini et conversion en Observable
+      // Appel au proxy IA du backend et conversion en Observable
       return from(this.generateContent(structuredPrompt));
     }
   }
@@ -587,7 +587,7 @@ export class GiftAiService {
   }
 
   /**
-   * Méthode privée pour appeler l'API Gemini
+   * Méthode privée pour appeler le proxy IA du backend
    */
   private async generateContent(prompt: string): Promise<any> {
     try {

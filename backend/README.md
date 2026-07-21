@@ -38,8 +38,9 @@ Ce backend Node.js/Express fournit les API pour l'application Liste de Cadeaux, 
    - `DATABASE_URL`: La chaîne de connexion PostgreSQL (automatiquement liée si vous utilisez render.yaml)
    - `SECRET_KEY`: clé longue utilisée pour signer les jetons administrateur
    - `ADMIN_PASSWORD`: mot de passe de l'espace administrateur
-   - `GEMINI_API_KEY`: clé API Gemini, jamais exposée au frontend
-   - `GEMINI_MODEL`: modèle Gemini à utiliser
+   - `QWEN_API_KEY`: clé Alibaba Cloud Model Studio, jamais exposée au frontend
+   - `QWEN_MODEL`: modèle Qwen à utiliser (`qwen3.7-plus` par défaut)
+   - `QWEN_BASE_URL`: endpoint compatible OpenAI de la région Model Studio
 
 6. Déployez le service en cliquant sur "Create Web Service"
 
@@ -61,8 +62,9 @@ Pour simplifier le déploiement, vous pouvez utiliser le fichier `render.yaml` p
    DATABASE_URL=postgres://username:password@localhost:5432/gift-list
    SECRET_KEY=votre_clé_secrète
    ADMIN_PASSWORD=votre_mot_de_passe
-   GEMINI_API_KEY=votre_clé_gemini
-   GEMINI_MODEL=gemini-3.5-flash
+   QWEN_API_KEY=votre_clé_model_studio
+   QWEN_MODEL=qwen3.7-plus
+   QWEN_BASE_URL=https://dashscope-us.aliyuncs.com/compatible-mode/v1
    ```
 
 3. Installez les dépendances:
@@ -92,4 +94,4 @@ Pour simplifier le déploiement, vous pouvez utiliser le fichier `render.yaml` p
 - `PUT /api/gifts/:id` - Mettre à jour un cadeau
 - `DELETE /api/gifts/:id` - Supprimer un cadeau
 - `GET /api/export` - Exporter tous les cadeaux au format JSON
-- `POST /api/ai/generate` - Générer des suggestions via le proxy Gemini
+- `POST /api/ai/generate` - Générer des suggestions via le proxy Qwen
