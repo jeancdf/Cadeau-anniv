@@ -388,6 +388,34 @@
   </ng-template>
 </section>
 
+<div class="restart-backdrop" *ngIf="showRestartModal" (click)="cancelRestart()"></div>
+<section
+  class="restart-dialog"
+  *ngIf="showRestartModal"
+  role="alertdialog"
+  aria-modal="true"
+  aria-labelledby="restart-title"
+  aria-describedby="restart-description">
+  <span class="restart-dialog__icon" aria-hidden="true">
+    <i class="bi bi-arrow-counterclockwise"></i>
+  </span>
+  <p class="restart-dialog__eyebrow">Nouvelle liste</p>
+  <h2 id="restart-title">Recommencer depuis le début ?</h2>
+  <p id="restart-description">
+    La conversation et les cadeaux sélectionnés seront effacés de cet appareil.
+    Une vitrine déjà partagée restera accessible avec son lien.
+  </p>
+  <div class="restart-dialog__actions">
+    <button type="button" class="restart-dialog__cancel" autofocus (click)="cancelRestart()">
+      Garder ma liste
+    </button>
+    <button type="button" class="restart-dialog__confirm" (click)="confirmRestart()">
+      <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+      Recommencer
+    </button>
+  </div>
+</section>
+
 <div class="publish-backdrop" *ngIf="showShareModal" (click)="closeShareModal()"></div>
 <section
   class="publish-dialog"

@@ -1449,7 +1449,8 @@
   color: var(--ink);
 }
 
-.publish-backdrop {
+.publish-backdrop,
+.restart-backdrop {
   position: fixed;
   z-index: 190;
   inset: 0;

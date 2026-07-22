@@ -126,6 +126,7 @@ export class GiftPlannerComponent implements AfterViewChecked {
   isLoadingPreview = false;
   enrichmentError = '';
   imagePreviewFailed = false;
+  showRestartModal = false;
   showShareModal = false;
   shareTitle = '';
   shareSlug = '';
@@ -383,11 +384,24 @@ export class GiftPlannerComponent implements AfterViewChecked {
   }
 
   restart(): void {
-    if (this.stage === 'chat' && this.messages.length
-      && !window.confirm('Recommencer effacera cette conversation et la liste en cours. Continuer ?')) {
+    if (this.stage === 'chat' && (this.messages.length || this.selectedGifts.length)) {
+      this.showRestartModal = true;
       return;
     }
 
+    this.resetPlanner();
+  }
+
+  cancelRestart(): void {
+    this.showRestartModal = false;
+  }
+
+  confirmRestart(): void {
+    this.resetPlanner();
+  }
+
+  private resetPlanner(): void {
+    this.showRestartModal = false;
     this.stage = 'audience';
     this.profile = {};
     this.messages = [];
