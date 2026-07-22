@@ -18,6 +18,7 @@ Ce projet est organisé en monorepo avec deux dossiers principaux:
 - Suggestions de cadeaux par IA (Qwen3.7 Plus)
 - Export de la liste au format JSON
 - Recherche, filtres par budget et partage de la liste
+- Publication d’une page publique par liste avec liens marchands et suivi affilié optionnel
 - Thèmes clair et sombre, interface responsive
 
 ### Backend
@@ -48,6 +49,8 @@ Configurez les variables d'environnement dans le fichier `config.env` :
 - `QWEN_MODEL`: modèle Qwen utilisé par le backend (`qwen/qwen3.7-plus` par défaut)
 - `QWEN_BASE_URL`: endpoint compatible OpenAI (`https://openrouter.ai/api/v1` par défaut)
 - `PORT`: Port du serveur (défaut: 3000)
+- `AMAZON_AFFILIATE_TAG`: identifiant Amazon Partenaires ajouté aux recherches publiques (optionnel)
+- `FNAC_AFFILIATE_URL_TEMPLATE` et `CDISCOUNT_AFFILIATE_URL_TEMPLATE`: URLs de redirection partenaire contenant `{url}` et, si nécessaire, `{query}` (optionnel)
 
 ### Installation du frontend
 ```bash
@@ -98,6 +101,7 @@ Dans `Settings > Secrets and variables > Actions`, configurez :
 - `APP_SECRET_KEY` : chaîne aléatoire longue pour signer les jetons ;
 - `ADMIN_PASSWORD` : mot de passe de l'espace d'administration ;
 - `QWEN_API_KEY` : clé OpenRouter configurée comme secret GitHub.
+- `AMAZON_AFFILIATE_TAG`, `FNAC_AFFILIATE_URL_TEMPLATE` et `CDISCOUNT_AFFILIATE_URL_TEMPLATE` : paramètres partenaires facultatifs pour monétiser les liens des listes publiques.
 
 Les variables GitHub `QWEN_MODEL` et `QWEN_BASE_URL` sont facultatives : leurs
 valeurs par défaut ciblent déjà `qwen/qwen3.7-plus` sur OpenRouter.

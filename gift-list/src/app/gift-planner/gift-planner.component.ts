@@ -6,7 +6,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { finalize, firstValueFrom } from 'rxjs';
 import {
   GiftPlannerService,
   PlannerChatResponse,
@@ -36,9 +36,11 @@ interface SavedPlannerState {
   messages: ChatMessage[];
   selectedGifts: PlannerGiftSuggestion[];
   profileSummary: string;
+  sharedListId?: string;
+  publishedListSignature?: string;
 }
 
-const STORAGE_KEY = 'gift-finder-planner-v1';
+export const PLANNER_STORAGE_KEY = 'gift-finder-planner-v1';
 
 @Component({
   selector: 'app-gift-planner',
@@ -50,6 +52,12 @@ const STORAGE_KEY = 'gift-finder-planner-v1';
 export class GiftPlannerComponent implements AfterViewChecked {
   @ViewChild('messageList') private messageList?: ElementRef<HTMLElement>;
   @ViewChild('messageInput') private messageInput?: ElementRef<HTMLTextAreaElement>;
+
+  readonly plannerSteps = [
+    { number: 1, label: 'Pour qui' },
+    { number: 2, label: 'Occasion' },
+    { number: 3, label: 'Démarrage' }
+  ];
 
   readonly audienceChoices: Choice<'self' | 'other'>[] = [
     {
@@ -112,9 +120,12 @@ export class GiftPlannerComponent implements AfterViewChecked {
   isMobileListOpen = false;
   errorMessage = '';
   shareLabel = 'Partager';
+  isPublishing = false;
 
   private nextMessageId = 1;
   private shouldScroll = false;
+  private sharedListId = '';
+  private publishedListSignature = '';
 
   constructor(private readonly plannerService: GiftPlannerService) {
     this.restoreState();
@@ -231,6 +242,7 @@ export class GiftPlannerComponent implements AfterViewChecked {
     }
 
     this.selectedGifts = [...this.selectedGifts, suggestion];
+    this.invalidatePublishedList();
     this.persistState();
   }
 
@@ -240,6 +252,7 @@ export class GiftPlannerComponent implements AfterViewChecked {
 
   removeGift(index: number): void {
     this.selectedGifts = this.selectedGifts.filter((_, giftIndex) => giftIndex !== index);
+    this.invalidatePublishedList();
     this.persistState();
   }
 
@@ -279,31 +292,61 @@ export class GiftPlannerComponent implements AfterViewChecked {
     this.draftMessage = '';
     this.errorMessage = '';
     this.isMobileListOpen = false;
+    this.sharedListId = '';
+    this.publishedListSignature = '';
     this.nextMessageId = 1;
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PLANNER_STORAGE_KEY);
   }
 
   async shareDraft(): Promise<void> {
-    if (!this.selectedGifts.length) {
+    if (!this.selectedGifts.length || this.isPublishing) {
       return;
     }
 
-    const giftNames = this.selectedGifts.map(gift => `• ${gift.name}`).join('\n');
-    const shareText = `Ma liste Gift Finder (${this.occasionLabel})\n\n${giftNames}`;
-
+    this.isPublishing = true;
+    this.shareLabel = 'Création du lien…';
     try {
+      const currentSignature = this.getPublishedListSignature();
+      if (!this.sharedListId || this.publishedListSignature !== currentSignature) {
+        const response = await firstValueFrom(this.plannerService.publishList({
+          occasion: this.occasionLabel,
+          audienceLabel: this.audienceLabel,
+          gifts: this.selectedGifts
+        }));
+        this.sharedListId = response.publicId;
+        this.publishedListSignature = currentSignature;
+        this.persistState();
+      }
+
+      const publicUrl = new URL(
+        `liste/${encodeURIComponent(this.sharedListId)}`,
+        document.baseURI
+      ).toString();
+      const shareData = {
+        title: `Ma liste de cadeaux · ${this.occasionLabel}`,
+        text: 'Voici ma liste Gift Finder avec toutes les idées et les liens pour les retrouver.',
+        url: publicUrl
+      };
+
       if (navigator.share) {
-        await navigator.share({ title: 'Ma liste Gift Finder', text: shareText });
+        await navigator.share(shareData);
+        this.shareLabel = 'Liste partagée !';
       } else {
-        await navigator.clipboard.writeText(shareText);
-        this.shareLabel = 'Liste copiée !';
-        window.setTimeout(() => this.shareLabel = 'Partager', 2200);
+        await this.copyText(publicUrl);
+        this.shareLabel = 'Lien copié !';
       }
     } catch (error) {
-      if ((error as DOMException)?.name !== 'AbortError') {
-        this.errorMessage = 'Impossible de partager pour le moment. Réessayez dans quelques instants.';
+      if ((error as DOMException)?.name === 'AbortError') {
+        this.shareLabel = 'Partager';
+        return;
       }
+      this.shareLabel = 'Réessayer';
+      this.errorMessage = 'Impossible de créer le lien public pour le moment. Réessayez dans quelques instants.';
+    } finally {
+      this.isPublishing = false;
     }
+
+    window.setTimeout(() => this.shareLabel = 'Partager', 2400);
   }
 
   private requestAssistant(): void {
@@ -382,11 +425,13 @@ export class GiftPlannerComponent implements AfterViewChecked {
       profile: this.profile,
       messages: this.messages,
       selectedGifts: this.selectedGifts,
-      profileSummary: this.profileSummary
+      profileSummary: this.profileSummary,
+      sharedListId: this.sharedListId,
+      publishedListSignature: this.publishedListSignature
     };
 
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(PLANNER_STORAGE_KEY, JSON.stringify(state));
     } catch {
       // The planner remains usable when storage is unavailable.
     }
@@ -394,7 +439,7 @@ export class GiftPlannerComponent implements AfterViewChecked {
 
   private restoreState(): void {
     try {
-      const rawState = localStorage.getItem(STORAGE_KEY);
+      const rawState = localStorage.getItem(PLANNER_STORAGE_KEY);
       if (!rawState) {
         return;
       }
@@ -409,10 +454,45 @@ export class GiftPlannerComponent implements AfterViewChecked {
       this.messages = Array.isArray(state.messages) ? state.messages : [];
       this.selectedGifts = Array.isArray(state.selectedGifts) ? state.selectedGifts : [];
       this.profileSummary = state.profileSummary || '';
+      this.sharedListId = state.sharedListId || '';
+      this.publishedListSignature = state.publishedListSignature || '';
       this.nextMessageId = Math.max(0, ...this.messages.map(message => Number(message.id) || 0)) + 1;
       this.shouldScroll = this.stage === 'chat';
     } catch {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PLANNER_STORAGE_KEY);
+    }
+  }
+
+  private invalidatePublishedList(): void {
+    this.sharedListId = '';
+    this.publishedListSignature = '';
+    this.shareLabel = 'Partager';
+  }
+
+  private getPublishedListSignature(): string {
+    return JSON.stringify({
+      occasion: this.occasionLabel,
+      audienceLabel: this.audienceLabel,
+      gifts: this.selectedGifts
+    });
+  }
+
+  private async copyText(value: string): Promise<void> {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+
+    const textArea = document.createElement('textarea');
+    textArea.value = value;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.select();
+    const copied = document.execCommand('copy');
+    textArea.remove();
+    if (!copied) {
+      throw new Error('La copie du lien a échoué');
     }
   }
 }

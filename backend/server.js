@@ -4,8 +4,10 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import giftRoutes from './routes/gifts.js';
 import aiRoutes from './routes/ai.js';
+import sharedListRoutes from './routes/shared-lists.js';
 import { sequelize, testConnection } from './config/database.js';
 import { syncGiftModel } from './models/gift.js';
+import { syncSharedGiftListModel } from './models/sharedGiftList.js';
 
 // Charger les variables d'environnement
 dotenv.config({ path: './config.env' });
@@ -79,12 +81,14 @@ app.post('/api/auth/login', (req, res) => {
   res.json(createAdminToken());
 });
 
-// La lecture de la liste et le nouveau chat de creation restent publics.
+// La lecture, le chat et la publication de listes partagees restent publics.
 // Les mutations d'administration et les anciens outils IA restent proteges.
 app.use((req, res, next) => {
   const isPublicGiftList = req.method === 'GET' && req.path === '/api/gifts';
   const isPublicPlannerChat = req.method === 'POST' && req.path === '/api/ai/chat';
-  if (isPublicGiftList || isPublicPlannerChat) {
+  const isPublicSharedList = (req.method === 'POST' && req.path === '/api/shared-lists')
+    || (req.method === 'GET' && req.path.startsWith('/api/shared-lists/'));
+  if (isPublicGiftList || isPublicPlannerChat || isPublicSharedList) {
     return next();
   }
 
@@ -100,6 +104,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api', aiRoutes);
 app.use('/api', giftRoutes);
+app.use('/api', sharedListRoutes);
 
 // Route de base
 app.get('/', (req, res) => {
@@ -114,6 +119,7 @@ const initializeServer = async () => {
     
     // Synchroniser les modèles avec la base de données
     await syncGiftModel();
+    await syncSharedGiftListModel();
     
     // Démarrer le serveur
     app.listen(PORT, () => {

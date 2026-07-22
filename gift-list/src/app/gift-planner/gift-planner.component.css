@@ -97,64 +97,127 @@
 }
 
 .onboarding-card__header {
-  min-height: 66px;
+  position: relative;
+  min-height: 84px;
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--line);
-  padding: 0.9rem 1.3rem;
-}
-
-.onboarding-card__header > div {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.onboarding-card__header span {
-  color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  padding: 0.85rem 1.3rem;
+  background: color-mix(in srgb, var(--surface-soft) 42%, var(--surface));
 }
 
 .back-button {
+  position: absolute;
+  z-index: 2;
+  left: 1.3rem;
   width: 36px;
   height: 36px;
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  margin-right: 0.8rem;
   border: 1px solid var(--line);
   border-radius: 50%;
-  background: transparent;
+  background: var(--surface);
   color: var(--ink);
   cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
 }
 
 .back-button:hover {
-  border-color: var(--ink);
-  background: var(--surface-soft);
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--line));
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  transform: translateX(-2px);
 }
 
-.progress {
-  width: 92px;
-  display: flex;
-  gap: 5px;
+.step-counter {
+  width: min(520px, calc(100% - 6rem));
+  margin: 0 auto;
 }
 
-.progress i {
-  height: 4px;
-  flex: 1;
+.step-counter ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step-counter li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+}
+
+.step-counter li:not(:last-child)::after {
+  position: absolute;
+  z-index: 0;
+  top: 15px;
+  left: calc(50% + 21px);
+  width: calc(100% - 42px);
+  height: 2px;
   border-radius: 999px;
   background: var(--line);
-  transition: background-color 180ms ease;
+  content: '';
+  transition: background-color 200ms ease;
 }
 
-.progress i.is-active {
-  background: var(--accent);
+.step-counter li.is-complete::after {
+  background: color-mix(in srgb, var(--sage) 72%, var(--line));
+}
+
+.step-counter__marker {
+  position: relative;
+  z-index: 1;
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease, box-shadow 200ms ease;
+}
+
+.step-counter li.is-complete .step-counter__marker {
+  border-color: var(--sage);
+  background: var(--sage);
+  color: var(--surface);
+}
+
+.step-counter li.is-current .step-counter__marker {
+  border-color: var(--accent-dark);
+  background: var(--accent-dark);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 13%, transparent);
+  color: var(--surface);
+}
+
+.step-counter__marker i {
+  font-size: 0.72rem;
+}
+
+.step-counter__label {
+  color: inherit;
+  font-size: 0.63rem;
+  font-weight: 750;
+  letter-spacing: 0.025em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.step-counter li.is-complete {
+  color: var(--sage);
+}
+
+.step-counter li.is-current {
+  color: var(--accent-dark);
 }
 
 .choice-step {
@@ -936,6 +999,16 @@
   cursor: not-allowed;
 }
 
+.share-button .is-spinning {
+  animation: share-button-spin 800ms linear infinite;
+}
+
+@keyframes share-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .draft-list__footer p {
   margin: 0.45rem 0 0;
   color: var(--muted);
@@ -1060,6 +1133,21 @@
 
   .onboarding-card {
     border-radius: 20px;
+  }
+
+  .onboarding-card__header {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+
+  .back-button {
+    left: 0.75rem;
+    width: 34px;
+    height: 34px;
+  }
+
+  .step-counter {
+    width: calc(100% - 2.5rem);
   }
 
   .choice-grid--two,

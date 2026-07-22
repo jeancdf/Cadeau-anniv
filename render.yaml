@@ -27,6 +27,12 @@ services:
         value: qwen/qwen3.7-plus
       - key: QWEN_BASE_URL
         value: https://openrouter.ai/api/v1
+      - key: AMAZON_AFFILIATE_TAG
+        sync: false
+      - key: FNAC_AFFILIATE_URL_TEMPLATE
+        sync: false
+      - key: CDISCOUNT_AFFILIATE_URL_TEMPLATE
+        sync: false
     autoDeploy: true
 
 databases:

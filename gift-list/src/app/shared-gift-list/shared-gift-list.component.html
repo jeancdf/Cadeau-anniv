@@ -1,0 +1,89 @@
+<section class="shared-page">
+  <div class="shared-page__ambient shared-page__ambient--one" aria-hidden="true"></div>
+  <div class="shared-page__ambient shared-page__ambient--two" aria-hidden="true"></div>
+
+  <div class="shared-shell">
+    <div class="shared-state" *ngIf="isLoading" aria-live="polite">
+      <span class="shared-state__icon is-loading"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span>
+      <h1>On prépare la liste…</h1>
+      <p>Les idées et leurs liens arrivent dans un instant.</p>
+    </div>
+
+    <div class="shared-state" *ngIf="!isLoading && loadError" role="alert">
+      <span class="shared-state__icon"><i class="bi bi-link-45deg" aria-hidden="true"></i></span>
+      <h1>Ce lien ne mène nulle part</h1>
+      <p>{{ loadError }}</p>
+      <a class="shared-state__action" routerLink="/">Créer une nouvelle liste</a>
+    </div>
+
+    <ng-container *ngIf="!isLoading && sharedList as list">
+      <header class="shared-hero">
+        <span class="shared-hero__badge"><i class="bi bi-gift" aria-hidden="true"></i> Liste partagée</span>
+        <p class="shared-hero__occasion">{{ list.occasion }} · {{ list.audienceLabel }}</p>
+        <h1>Une liste pleine de<br><em>bonnes intentions.</em></h1>
+        <p class="shared-hero__intro">
+          {{ list.gifts.length }} idée{{ list.gifts.length > 1 ? 's' : '' }} choisie{{ list.gifts.length > 1 ? 's' : '' }}
+          avec soin, avec les liens utiles pour les retrouver.
+        </p>
+        <span class="shared-hero__date" *ngIf="formatCreationDate(list.createdAt) as creationDate">
+          Créée le {{ creationDate }}
+        </span>
+      </header>
+
+      <div class="shared-gifts">
+        <article
+          class="shared-gift"
+          *ngFor="let gift of list.gifts; let giftIndex = index; trackBy: trackGift">
+          <header class="shared-gift__header">
+            <span class="shared-gift__number">{{ (giftIndex + 1).toString().padStart(2, '0') }}</span>
+            <span class="shared-gift__budget">{{ gift.budgetLabel || 'Budget à préciser' }}</span>
+          </header>
+
+          <div class="shared-gift__body">
+            <h2>{{ gift.name }}</h2>
+            <p>{{ gift.description }}</p>
+            <aside *ngIf="gift.reason">
+              <i class="bi bi-stars" aria-hidden="true"></i>
+              <span><strong>Pourquoi cette idée</strong>{{ gift.reason }}</span>
+            </aside>
+          </div>
+
+          <footer class="shared-gift__offers">
+            <p><i class="bi bi-bag" aria-hidden="true"></i> Où le trouver</p>
+            <div class="shopping-links">
+              <a
+                *ngFor="let link of gift.shoppingLinks; let linkIndex = index; trackBy: trackShoppingLink"
+                [href]="link.url"
+                target="_blank"
+                [attr.rel]="link.isAffiliate ? 'sponsored noopener noreferrer' : 'noopener noreferrer'">
+                <span>
+                  <strong>{{ link.merchant }}</strong>
+                  <small *ngIf="link.isAffiliate">Lien affilié</small>
+                  <small *ngIf="!link.isAffiliate">Voir les résultats</small>
+                </span>
+                <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+              </a>
+            </div>
+          </footer>
+        </article>
+      </div>
+
+      <aside class="affiliate-note">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <p>
+          <strong>Transparence avant tout.</strong>
+          Certains liens peuvent être affiliés, notamment via le réseau Awin. Si un achat est effectué
+          via ces liens, Gift Finder peut recevoir une commission, sans coût supplémentaire pour vous.
+        </p>
+      </aside>
+
+      <section class="shared-cta">
+        <div>
+          <p>Une occasion approche ?</p>
+          <h2>Créez votre propre liste.</h2>
+        </div>
+        <a routerLink="/"><i class="bi bi-stars" aria-hidden="true"></i> Commencer</a>
+      </section>
+    </ng-container>
+  </div>
+</section>

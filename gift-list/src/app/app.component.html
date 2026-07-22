@@ -1,6 +1,6 @@
 <header class="site-header">
   <div class="site-header__inner">
-    <a class="brand" href="/" aria-label="Gift Finder, accueil">
+    <a class="brand" routerLink="/" aria-label="Gift Finder, accueil">
       <span class="brand__mark"><i class="bi bi-gift" aria-hidden="true"></i></span>
       <span class="brand__copy">
         <strong>Gift Finder</strong>
@@ -19,7 +19,7 @@
 </header>
 
 <main>
-  <app-gift-planner></app-gift-planner>
+  <router-outlet></router-outlet>
 </main>
 
 <footer class="site-footer">
