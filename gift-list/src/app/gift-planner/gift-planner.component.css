@@ -1155,7 +1155,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1200px) {
   .context-pills {
     display: none;
   }
