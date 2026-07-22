@@ -9,11 +9,7 @@
 }
 
 .planner__ambient {
-  position: absolute;
-  z-index: -1;
-  border-radius: 50%;
-  filter: blur(10px);
-  pointer-events: none;
+  display: none;
 }
 
 .planner__ambient--one {

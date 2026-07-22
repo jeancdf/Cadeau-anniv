@@ -9,8 +9,7 @@
   z-index: 100;
   top: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
-  background: color-mix(in srgb, var(--paper) 90%, transparent);
-  backdrop-filter: blur(18px);
+  background: var(--paper);
 }
 
 .site-header__inner,
