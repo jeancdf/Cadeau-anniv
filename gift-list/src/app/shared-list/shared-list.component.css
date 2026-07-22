@@ -141,14 +141,13 @@
   right: 0.8rem;
   bottom: 0.8rem;
   max-width: calc(100% - 1.6rem);
-  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 0.42rem 0.65rem;
-  background: color-mix(in srgb, var(--surface) 91%, transparent);
+  background: var(--surface);
   color: var(--ink);
   font-size: 0.68rem;
   font-weight: 750;
-  backdrop-filter: blur(10px);
 }
 
 .public-gift__content {

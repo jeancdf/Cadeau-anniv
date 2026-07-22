@@ -776,9 +776,7 @@
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   padding: 1.5rem;
-  background:
-    linear-gradient(color-mix(in srgb, var(--paper) 92%, transparent), color-mix(in srgb, var(--paper) 92%, transparent)),
-    repeating-linear-gradient(0deg, transparent, transparent 25px, color-mix(in srgb, var(--line) 45%, transparent) 26px);
+  background: var(--paper);
 }
 
 .draft-list__header {
@@ -1388,7 +1386,6 @@
   z-index: 190;
   inset: 0;
   background: rgba(10, 12, 10, 0.55);
-  backdrop-filter: blur(5px);
 }
 
 .publish-dialog {
