@@ -1,4 +1,8 @@
 <main class="shared-page">
+  <div class="shared-page__utility">
+    <app-theme-toggle></app-theme-toggle>
+  </div>
+
   <div class="shared-loading" *ngIf="isLoading" aria-live="polite">
     <span class="large-spinner" aria-hidden="true"></span>
     <p>Ouverture de la liste…</p>

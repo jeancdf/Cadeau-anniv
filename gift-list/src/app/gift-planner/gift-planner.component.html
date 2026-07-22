@@ -4,11 +4,24 @@
 
   <ng-container *ngIf="stage !== 'chat'; else chatWorkspace">
     <div class="onboarding">
+      <div class="onboarding__masthead">
+        <div class="onboarding__identity">
+          <span class="onboarding__brand-mark"><i class="bi bi-gift" aria-hidden="true"></i></span>
+          <span>
+            <strong>Gift Finder</strong>
+            <small>Votre copilote cadeau</small>
+          </span>
+        </div>
+        <div class="planner-tools">
+          <button *ngIf="stage !== 'audience'" type="button" class="planner-reset" (click)="restart()">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Nouvelle liste</span>
+          </button>
+          <app-theme-toggle></app-theme-toggle>
+        </div>
+      </div>
+
       <div class="onboarding__intro">
-        <span class="confidence-badge">
-          <i class="bi bi-stars" aria-hidden="true"></i>
-          Votre copilote cadeau
-        </span>
         <h1>
           Une liste qui tombe juste,<br>
           <em>sans partir d’une idée parfaite.</em>
@@ -128,9 +141,16 @@
               <h1 id="conversation-title">Construisons la bonne liste</h1>
             </div>
           </div>
-          <div class="context-pills">
-            <span>{{ audienceLabel }}</span>
-            <span>{{ occasionLabel }}</span>
+          <div class="conversation__tools">
+            <div class="context-pills">
+              <span>{{ audienceLabel }}</span>
+              <span>{{ occasionLabel }}</span>
+            </div>
+            <button type="button" class="planner-reset" (click)="restart()">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+              <span>Nouvelle liste</span>
+            </button>
+            <app-theme-toggle></app-theme-toggle>
           </div>
         </header>
 

@@ -1,30 +1,3 @@
-<header class="site-header">
-  <div class="site-header__inner">
-    <a class="brand" routerLink="/" aria-label="Gift Finder, accueil">
-      <span class="brand__mark"><i class="bi bi-gift" aria-hidden="true"></i></span>
-      <span class="brand__copy">
-        <strong>Gift Finder</strong>
-        <small>Le cadeau qui tombe juste</small>
-      </span>
-    </a>
-
-    <div class="site-header__actions">
-      <button type="button" class="new-list-button" (click)="startNewList()">
-        <i class="bi bi-plus-lg" aria-hidden="true"></i>
-        <span>{{ isSharedListRoute ? 'Créer ma liste' : 'Nouvelle liste' }}</span>
-      </button>
-      <app-theme-toggle></app-theme-toggle>
-    </div>
-  </div>
-</header>
-
 <main>
   <router-outlet></router-outlet>
 </main>
-
-<footer class="site-footer">
-  <div class="site-footer__inner">
-    <p>Des idées personnelles, trouvées ensemble.</p>
-    <app-version-display></app-version-display>
-  </div>
-</footer>

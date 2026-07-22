@@ -3,11 +3,12 @@ import { Component, DestroyRef, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SharedList, SharedListService, SharedShoppingLink } from '../services/shared-list.service';
+import { ThemeToggleComponent } from '../components/theme-toggle/theme-toggle.component';
 
 @Component({
   selector: 'app-shared-list',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ThemeToggleComponent],
   templateUrl: './shared-list.component.html',
   styleUrl: './shared-list.component.css'
 })

@@ -8,22 +8,25 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="isDarkTheme ? 'Activer le thème clair' : 'Activer le thème sombre'">
+    <button type="button" class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="isDarkTheme ? 'Activer le thème clair' : 'Activer le thème sombre'">
       <i class="bi" [ngClass]="isDarkTheme ? 'bi-sun-fill' : 'bi-moon-fill'"></i>
     </button>
   `,
   styles: [`
+    :host {
+      display: inline-flex;
+    }
+
     .theme-toggle {
-      border: none;
-      background: transparent;
       cursor: pointer;
       width: 40px;
       height: 40px;
       padding: 0;
       border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
       color: var(--ink);
       font-size: 1rem;
-      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;

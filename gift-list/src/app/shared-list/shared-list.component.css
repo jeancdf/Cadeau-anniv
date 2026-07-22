@@ -4,9 +4,16 @@
 
 .shared-page {
   width: min(1320px, calc(100% - 3rem));
-  min-height: calc(100vh - 165px);
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
-  padding: clamp(2.4rem, 5vw, 5rem) 0 6rem;
+  padding: clamp(1rem, 2vw, 1.6rem) 0 5rem;
+}
+
+.shared-page__utility {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: clamp(1.5rem, 4vw, 3rem);
 }
 
 .shared-intro {
@@ -347,7 +354,11 @@
 @media (max-width: 620px) {
   .shared-page {
     width: min(100% - 1.2rem, 1320px);
-    padding-top: 2rem;
+    padding-top: 0.8rem;
+  }
+
+  .shared-page__utility {
+    margin-bottom: 1.5rem;
   }
 
   .shared-intro {

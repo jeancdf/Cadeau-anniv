@@ -15,6 +15,7 @@ import {
   PlannerProfile
 } from '../services/gift-planner.service';
 import { SharedListPayload, SharedListService } from '../services/shared-list.service';
+import { ThemeToggleComponent } from '../components/theme-toggle/theme-toggle.component';
 
 type PlannerStage = 'audience' | 'occasion' | 'start' | 'chat';
 
@@ -46,7 +47,7 @@ export const PLANNER_STORAGE_KEY = 'gift-finder-planner-v1';
 @Component({
   selector: 'app-gift-planner',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ThemeToggleComponent],
   templateUrl: './gift-planner.component.html',
   styleUrl: './gift-planner.component.css'
 })
