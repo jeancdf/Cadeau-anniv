@@ -97,5 +97,7 @@ Pour simplifier le déploiement, vous pouvez utiliser le fichier `render.yaml` p
 - `DELETE /api/gifts/:id` - Supprimer un cadeau
 - `GET /api/export` - Exporter tous les cadeaux au format JSON
 - `POST /api/ai/generate` - Générer des suggestions via le proxy Qwen
-- `POST /api/shared-lists` - Publier un instantané public d’une sélection
-- `GET /api/shared-lists/:publicId` - Consulter une liste publique et ses liens marchands
+- `POST /api/shared-lists` - Publier une sélection sous un slug personnalisé
+- `GET /api/shared-lists/:slug` - Consulter une liste publique et ses liens marchands
+- `PUT /api/shared-lists/:slug` - Republier avec le secret d’édition de la liste
+- `POST /api/product-preview` - Récupérer l’image Open Graph d’un lien produit

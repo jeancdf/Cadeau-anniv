@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import express from 'express';
 import { UniqueConstraintError } from 'sequelize';
 import { SharedList } from '../models/shared-list.js';
@@ -6,6 +7,7 @@ import {
   editTokensMatch,
   hashEditToken,
   normalizeSharedListPayload,
+  normalizeSharedGifts,
   normalizeSlug,
   toPublicSharedList
 } from '../services/shared-list-utils.js';
@@ -128,17 +130,29 @@ router.post(
   createRateLimit({ keyPrefix: 'publish', windowMs: 10 * 60 * 1000, maximum: 15 }),
   async (req, res) => {
     try {
-      const payload = normalizeSharedListPayload(req.body, { requireSlug: true });
+      const isLegacySnapshot = !req.body?.slug && Boolean(req.body?.audienceLabel);
+      const payload = isLegacySnapshot
+        ? {
+            slug: crypto.randomBytes(8).toString('hex'),
+            title: `Liste de cadeaux — ${trimText(req.body?.occasion, 80) || 'Gift Finder'}`,
+            occasion: trimText(req.body?.occasion, 80),
+            audienceLabel: trimText(req.body?.audienceLabel, 80),
+            gifts: normalizeSharedGifts(req.body?.gifts)
+          }
+        : normalizeSharedListPayload(req.body, { requireSlug: true });
       const editToken = createEditToken();
       const sharedList = await SharedList.create({
         ...payload,
         editTokenHash: hashEditToken(editToken)
       });
 
-      return res.status(201).json({
+      const response = {
         list: enrichPublicList(sharedList),
         editToken
-      });
+      };
+      return res.status(201).json(isLegacySnapshot
+        ? { ...response, publicId: sharedList.slug }
+        : response);
     } catch (error) {
       if (error instanceof UniqueConstraintError || error?.name === 'SequelizeUniqueConstraintError') {
         return res.status(409).json({ message: 'Ce lien personnalisé est déjà utilisé' });
