@@ -29,7 +29,6 @@ const UserSession = sequelize.define('UserSession', {
 }, {
   timestamps: true,
   indexes: [
-    { unique: true, fields: ['tokenHash'] },
     { fields: ['userId'] },
     { fields: ['expiresAt'] }
   ]

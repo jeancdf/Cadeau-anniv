@@ -25,8 +25,7 @@ const User = sequelize.define('User', {
     allowNull: false
   }
 }, {
-  timestamps: true,
-  indexes: [{ unique: true, fields: ['email'] }]
+  timestamps: true
 });
 
 const syncUserModel = async () => {
