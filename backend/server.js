@@ -5,9 +5,13 @@ import crypto from 'crypto';
 import giftRoutes from './routes/gifts.js';
 import aiRoutes from './routes/ai.js';
 import sharedListRoutes from './routes/shared-lists.js';
+import accountRoutes from './routes/account.js';
 import { sequelize, testConnection } from './config/database.js';
 import { syncGiftModel } from './models/gift.js';
 import { syncSharedListModel } from './models/shared-list.js';
+import { syncUserModel } from './models/user.js';
+import { syncUserSessionModel } from './models/user-session.js';
+import { loadOptionalUser } from './services/user-auth.js';
 
 // Charger les variables d'environnement
 dotenv.config({ path: './config.env' });
@@ -63,9 +67,20 @@ const passwordsMatch = (providedPassword) => {
   return crypto.timingSafeEqual(expectedHash, providedHash);
 };
 
+const configuredOrigins = String(process.env.FRONTEND_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+const isAllowedOrigin = (origin) => !origin
+  || configuredOrigins.includes(origin)
+  || (process.env.NODE_ENV !== 'production' && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin));
+
 // Middleware pour le parsing JSON et CORS
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  credentials: true,
+  origin: (origin, callback) => callback(null, isAllowedOrigin(origin))
+}));
 
 // Health check endpoint (sans vérification de clé)
 app.get('/api/health', (req, res) => {
@@ -81,8 +96,12 @@ app.post('/api/auth/login', (req, res) => {
   res.json(createAdminToken());
 });
 
+// Les comptes personnels sont distincts de l'accès administrateur historique.
+app.use(loadOptionalUser);
+app.use('/api', accountRoutes);
+
 // Les listes partagees utilisent leur propre secret d'edition et restent
-// independantes de l'authentification d'administration historique.
+// publiques, tout en pouvant être rattachées à un compte personnel.
 app.use('/api', sharedListRoutes);
 
 // La lecture de la liste et le nouveau chat de creation restent publics.
@@ -118,7 +137,9 @@ const initializeServer = async () => {
     // Tester la connexion à la base de données
     await testConnection();
     
-    // Synchroniser les modèles avec la base de données
+    // Synchroniser les modèles avec la base de données dans l'ordre des dépendances.
+    await syncUserModel();
+    await syncUserSessionModel();
     await Promise.all([syncGiftModel(), syncSharedListModel()]);
     
     // Démarrer le serveur

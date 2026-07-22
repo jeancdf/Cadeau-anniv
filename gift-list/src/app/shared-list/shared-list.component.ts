@@ -5,11 +5,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SharedList, SharedListService, SharedShoppingLink } from '../services/shared-list.service';
 import { ThemeToggleComponent } from '../components/theme-toggle/theme-toggle.component';
 import { PLANNER_STORAGE_KEY } from '../gift-planner/planner-storage';
+import { AccountAccessComponent } from '../components/account-access/account-access.component';
 
 @Component({
   selector: 'app-shared-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, ThemeToggleComponent],
+  imports: [CommonModule, RouterLink, ThemeToggleComponent, AccountAccessComponent],
   templateUrl: './shared-list.component.html',
   styleUrl: './shared-list.component.css'
 })

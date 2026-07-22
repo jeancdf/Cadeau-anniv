@@ -1,0 +1,241 @@
+:host {
+  display: inline-flex;
+}
+
+.account-trigger {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.55rem 0.75rem;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.account-trigger:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+}
+
+.account-trigger:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.account-trigger--cta {
+  width: 100%;
+  min-height: 46px;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.76rem;
+}
+
+.account-trigger--cta:hover:not(:disabled) {
+  border-color: var(--ink-soft);
+  background: var(--ink-soft);
+  color: var(--surface);
+}
+
+.account-backdrop {
+  position: fixed;
+  z-index: 300;
+  inset: 0;
+  background: rgba(10, 12, 10, 0.58);
+}
+
+.account-dialog {
+  position: fixed;
+  z-index: 310;
+  top: 50%;
+  left: 50%;
+  width: min(470px, calc(100% - 1.5rem));
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  transform: translate(-50%, -50%);
+}
+
+.account-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.account-dialog__mark {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-size: 1.1rem;
+}
+
+.account-dialog__header button {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.account-dialog__copy {
+  padding: 1.5rem 0 1.25rem;
+}
+
+.account-dialog__copy p {
+  margin: 0 0 0.45rem;
+  color: var(--accent);
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.account-dialog__copy h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.7rem, 5vw, 2.35rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+.account-dialog__copy span {
+  display: block;
+  margin-top: 0.65rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.account-dialog__tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 0.25rem;
+  background: var(--surface-soft);
+}
+
+.account-dialog__tabs button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.account-dialog__tabs button.is-active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(20, 20, 18, 0.08);
+}
+
+form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+label span {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--ink-soft);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+label input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  outline: 0;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+
+label input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.account-dialog__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0;
+  border-radius: 9px;
+  padding: 0.65rem;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.72rem;
+}
+
+.account-dialog__submit {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border: 0;
+  border-radius: 11px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.account-dialog__submit:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.account-dialog__guest-note {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .account-trigger:not(.account-trigger--cta) span {
+    display: none;
+  }
+
+  .account-trigger:not(.account-trigger--cta) {
+    width: 40px;
+    padding: 0;
+  }
+
+  .account-dialog {
+    border-radius: 17px;
+  }
+}

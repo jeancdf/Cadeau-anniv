@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Location } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface SharedGift {
@@ -60,7 +60,8 @@ export class SharedListService {
   createSharedList(payload: SharedListPayload & { slug: string }): Observable<{ list: SharedList; editToken: string }> {
     return this.http.post<{ list: SharedList; editToken: string }>(
       `${environment.apiUrl}/shared-lists`,
-      payload
+      payload,
+      { withCredentials: true }
     ).pipe(tap(response => {
       this.saveEditToken(response.list.slug, response.editToken);
     }));
@@ -72,8 +73,27 @@ export class SharedListService {
     return this.http.put<{ list: SharedList }>(
       `${environment.apiUrl}/shared-lists/${encodeURIComponent(slug)}`,
       payload,
-      { headers }
+      { headers, withCredentials: true }
     );
+  }
+
+  claimLocalLists(): Observable<number> {
+    const editableLists = this.getLocalEditTokens();
+    if (!editableLists.length) {
+      return of(0);
+    }
+
+    return forkJoin(editableLists.map(({ slug, token }) => this.http.post(
+      `${environment.apiUrl}/shared-lists/${encodeURIComponent(slug)}/claim`,
+      {},
+      {
+        headers: new HttpHeaders({ 'X-Edit-Token': token }),
+        withCredentials: true
+      }
+    ).pipe(
+      map(() => 1),
+      catchError(() => of(0))
+    ))).pipe(map(results => results.reduce((total, result) => total + result, 0)));
   }
 
   previewProduct(url: string): Observable<ProductPreview> {
@@ -102,6 +122,26 @@ export class SharedListService {
       localStorage.setItem(`${this.editTokenPrefix}${slug}`, token);
     } catch {
       // La consultation publique reste disponible si le stockage est bloqué.
+    }
+  }
+
+  private getLocalEditTokens(): Array<{ slug: string; token: string }> {
+    try {
+      const entries: Array<{ slug: string; token: string }> = [];
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith(this.editTokenPrefix)) {
+          continue;
+        }
+        const slug = key.slice(this.editTokenPrefix.length);
+        const token = localStorage.getItem(key) || '';
+        if (slug && token) {
+          entries.push({ slug, token });
+        }
+      }
+      return entries;
+    } catch {
+      return [];
     }
   }
 }

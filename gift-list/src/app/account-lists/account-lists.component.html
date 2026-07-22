@@ -1,0 +1,76 @@
+<main class="account-page">
+  <header class="account-page__header">
+    <a class="account-brand" routerLink="/">
+      <span><i class="bi bi-gift" aria-hidden="true"></i></span>
+      <strong>Gift Finder</strong>
+    </a>
+    <div class="account-page__actions">
+      <button *ngIf="user" type="button" class="account-logout" (click)="logout()">
+        <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Déconnexion
+      </button>
+      <app-account-access *ngIf="!user"></app-account-access>
+      <app-theme-toggle></app-theme-toggle>
+    </div>
+  </header>
+
+  <section class="account-page__loading" *ngIf="!isReady">
+    <span class="large-spinner" aria-hidden="true"></span>
+    <p>Ouverture de votre espace…</p>
+  </section>
+
+  <section class="account-page__guest" *ngIf="isReady && !user">
+    <span class="account-page__guest-icon"><i class="bi bi-bookmark-heart" aria-hidden="true"></i></span>
+    <p class="account-eyebrow">Espace personnel</p>
+    <h1>Retrouvez toutes vos listes.</h1>
+    <p>Connectez-vous pour accéder aux sélections enregistrées sur votre compte.</p>
+    <app-account-access variant="cta" guestLabel="Se connecter ou créer un compte"></app-account-access>
+    <a routerLink="/creer">Continuer sans compte</a>
+  </section>
+
+  <ng-container *ngIf="isReady && user">
+    <section class="account-page__intro">
+      <div>
+        <p class="account-eyebrow">Bonjour {{ user.displayName }}</p>
+        <h1>Vos listes, toujours à portée de main.</h1>
+        <p>Ouvrez une vitrine publiée ou reprenez sa sélection pour la modifier.</p>
+      </div>
+      <button type="button" class="account-create" (click)="createNewList()">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> Nouvelle liste
+      </button>
+    </section>
+
+    <p class="account-page__error" *ngIf="errorMessage" role="alert">
+      {{ errorMessage }} <button type="button" (click)="loadLists()">Réessayer</button>
+    </p>
+
+    <section class="account-page__list-loading" *ngIf="isLoading">
+      <span class="large-spinner" aria-hidden="true"></span> Chargement des listes…
+    </section>
+
+    <section class="account-empty" *ngIf="!isLoading && !errorMessage && !lists.length">
+      <span><i class="bi bi-gift" aria-hidden="true"></i></span>
+      <h2>Votre première liste vous attend.</h2>
+      <p>Vous pouvez commencer sans formulaire supplémentaire : votre compte est déjà prêt.</p>
+      <button type="button" class="account-create" (click)="createNewList()">Créer une liste</button>
+    </section>
+
+    <section class="account-lists" *ngIf="!isLoading && lists.length" aria-label="Vos listes de cadeaux">
+      <article *ngFor="let list of lists">
+        <div class="account-list__topline">
+          <span>{{ list.occasion || 'Liste de cadeaux' }}</span>
+          <small>{{ list.giftCount }} idée{{ list.giftCount > 1 ? 's' : '' }}</small>
+        </div>
+        <h2>{{ list.title }}</h2>
+        <p>Modifiée le {{ list.updatedAt | date:'d MMMM y':'':'fr-FR' }}</p>
+        <div class="account-list__actions">
+          <a class="account-list__edit" routerLink="/creer" [queryParams]="{ edit: list.slug }">
+            <i class="bi bi-pencil" aria-hidden="true"></i> Modifier
+          </a>
+          <a [routerLink]="['/liste', list.slug]" target="_blank">
+            Voir la vitrine <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+          </a>
+        </div>
+      </article>
+    </section>
+  </ng-container>
+</main>

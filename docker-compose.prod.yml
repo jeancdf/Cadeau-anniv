@@ -32,6 +32,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est requis}
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY est requis}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD est requis}
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-}
       QWEN_API_KEY: ${QWEN_API_KEY:?QWEN_API_KEY est requis}
       QWEN_MODEL: ${QWEN_MODEL:-qwen/qwen3.7-plus}
       QWEN_BASE_URL: ${QWEN_BASE_URL:-https://openrouter.ai/api/v1}

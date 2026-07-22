@@ -1,7 +1,9 @@
 import {
   AfterViewChecked,
   Component,
+  DestroyRef,
   ElementRef,
+  OnInit,
   ViewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -16,7 +18,11 @@ import {
 } from '../services/gift-planner.service';
 import { SharedListPayload, SharedListService } from '../services/shared-list.service';
 import { ThemeToggleComponent } from '../components/theme-toggle/theme-toggle.component';
+import { AccountAccessComponent } from '../components/account-access/account-access.component';
+import { AccountService } from '../services/account.service';
 import { PLANNER_STORAGE_KEY } from './planner-storage';
+import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 type PlannerStage = 'audience' | 'occasion' | 'start' | 'chat';
 
@@ -46,11 +52,11 @@ interface SavedPlannerState {
 @Component({
   selector: 'app-gift-planner',
   standalone: true,
-  imports: [CommonModule, FormsModule, ThemeToggleComponent],
+  imports: [CommonModule, FormsModule, ThemeToggleComponent, AccountAccessComponent],
   templateUrl: './gift-planner.component.html',
   styleUrl: './gift-planner.component.css'
 })
-export class GiftPlannerComponent implements AfterViewChecked {
+export class GiftPlannerComponent implements OnInit, AfterViewChecked {
   @ViewChild('messageList') private messageList?: ElementRef<HTMLElement>;
   @ViewChild('messageInput') private messageInput?: ElementRef<HTMLTextAreaElement>;
 
@@ -136,15 +142,31 @@ export class GiftPlannerComponent implements AfterViewChecked {
   publishedUrl = '';
   currentSharedSlug = '';
   currentSharedTitle = '';
+  isLoadingSavedList = false;
 
   private nextMessageId = 1;
   private shouldScroll = false;
 
   constructor(
     private readonly plannerService: GiftPlannerService,
-    private readonly sharedListService: SharedListService
+    private readonly sharedListService: SharedListService,
+    readonly accountService: AccountService,
+    private readonly route: ActivatedRoute,
+    private readonly router: Router,
+    private readonly destroyRef: DestroyRef
   ) {
     this.restoreState();
+  }
+
+  ngOnInit(): void {
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        const slug = String(params.get('edit') || '').trim();
+        if (slug) {
+          this.loadSavedList(slug);
+        }
+      });
   }
 
   ngAfterViewChecked(): void {
@@ -416,6 +438,9 @@ export class GiftPlannerComponent implements AfterViewChecked {
     this.closeShareModal();
     this.nextMessageId = 1;
     localStorage.removeItem(PLANNER_STORAGE_KEY);
+    if (this.route.snapshot.queryParamMap.has('edit')) {
+      void this.router.navigate(['/creer'], { replaceUrl: true });
+    }
   }
 
   shareDraft(): void {
@@ -463,11 +488,6 @@ export class GiftPlannerComponent implements AfterViewChecked {
       this.publishError = 'Le lien personnalisé doit contenir au moins 3 caractères.';
       return;
     }
-    if (this.currentSharedSlug && !this.sharedListService.hasEditToken(this.currentSharedSlug)) {
-      this.publishError = 'Le secret d’édition de cette liste n’est plus disponible dans ce navigateur.';
-      return;
-    }
-
     const payload: SharedListPayload = {
       title,
       occasion: this.occasionLabel,
@@ -566,6 +586,56 @@ export class GiftPlannerComponent implements AfterViewChecked {
         this.errorMessage = 'L’IA n’arrive pas à répondre pour le moment. Votre conversation est conservée.';
       }
     });
+  }
+
+  private loadSavedList(slug: string): void {
+    if (this.isLoadingSavedList) {
+      return;
+    }
+    this.isLoadingSavedList = true;
+    this.errorMessage = '';
+    this.sharedListService.getSharedList(slug)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isLoadingSavedList = false)
+      )
+      .subscribe({
+        next: list => {
+          const occasion = this.occasionChoices.find(choice =>
+            choice.label.toLocaleLowerCase('fr') === String(list.occasion || '').toLocaleLowerCase('fr')
+          )?.value || 'autre';
+          this.stage = 'chat';
+          this.profile = {
+            audience: String(list.audienceLabel || '').toLocaleLowerCase('fr').includes('moi') ? 'self' : 'other',
+            occasion,
+            startMode: 'ideas'
+          };
+          this.selectedGifts = list.gifts.map(gift => ({
+            name: gift.name,
+            description: gift.description || '',
+            reason: gift.reason || '',
+            budgetLabel: gift.budgetLabel || '',
+            productUrl: gift.productUrl || '',
+            imageUrl: gift.imageUrl || ''
+          }));
+          this.currentSharedSlug = list.slug;
+          this.currentSharedTitle = list.title;
+          this.shareSlug = list.slug;
+          this.shareTitle = list.title;
+          this.profileSummary = '';
+          this.messages = [{
+            id: 1,
+            role: 'assistant',
+            content: `La liste « ${list.title} » est chargée. Vous pouvez modifier les cadeaux ou me demander de nouvelles idées.`
+          }];
+          this.nextMessageId = 2;
+          this.shouldScroll = true;
+          this.persistState();
+        },
+        error: error => {
+          this.errorMessage = error?.error?.message || 'Impossible de charger cette liste.';
+        }
+      });
   }
 
   private handleAssistantResponse(response: PlannerChatResponse): void {

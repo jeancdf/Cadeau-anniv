@@ -1,4 +1,9 @@
 <section class="planner" [class.planner--chat]="stage === 'chat'">
+  <div class="planner-resume-loading" *ngIf="isLoadingSavedList" aria-live="polite">
+    <span class="large-spinner" aria-hidden="true"></span>
+    <p>Chargement de votre liste…</p>
+  </div>
+
   <ng-container *ngIf="stage !== 'chat'; else chatWorkspace">
     <div class="onboarding">
       <div class="onboarding__masthead">
@@ -14,6 +19,7 @@
             <i class="bi bi-plus-lg" aria-hidden="true"></i>
             <span>Nouvelle liste</span>
           </button>
+          <app-account-access></app-account-access>
           <app-theme-toggle></app-theme-toggle>
         </div>
       </div>
@@ -147,6 +153,7 @@
               <i class="bi bi-plus-lg" aria-hidden="true"></i>
               <span>Nouvelle liste</span>
             </button>
+            <app-account-access></app-account-access>
             <app-theme-toggle></app-theme-toggle>
           </div>
         </header>
@@ -484,6 +491,16 @@
           <i class="bi bi-copy" aria-hidden="true"></i>
         </button>
       </div>
+      <aside class="publish-account" *ngIf="!accountService.currentUser">
+        <div>
+          <i class="bi bi-bookmark-heart" aria-hidden="true"></i>
+          <span>
+            <strong>Ne perdez pas cette liste</strong>
+            <small>Créez un compte pour la retrouver sur tous vos appareils.</small>
+          </span>
+        </div>
+        <app-account-access variant="cta" guestLabel="Sauvegarder dans mon compte"></app-account-access>
+      </aside>
       <p class="publish-dialog__error" *ngIf="publishError" role="alert">{{ publishError }}</p>
       <button type="button" class="publish-dialog__submit" (click)="sharePublishedLink()">
         <i class="bi bi-send" aria-hidden="true"></i> {{ shareLabel }}

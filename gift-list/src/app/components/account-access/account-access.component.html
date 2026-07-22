@@ -1,0 +1,88 @@
+<button
+  type="button"
+  class="account-trigger"
+  [class.account-trigger--cta]="variant === 'cta'"
+  [disabled]="!isReady"
+  (click)="handleTrigger()">
+  <i class="bi" [ngClass]="user ? 'bi-person-check' : 'bi-person'" aria-hidden="true"></i>
+  <span>{{ isReady ? triggerLabel : 'Chargement…' }}</span>
+</button>
+
+<div class="account-backdrop" *ngIf="isOpen" (click)="close()"></div>
+<section
+  class="account-dialog"
+  *ngIf="isOpen"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="account-dialog-title">
+  <header class="account-dialog__header">
+    <span class="account-dialog__mark"><i class="bi bi-bookmark-heart" aria-hidden="true"></i></span>
+    <button type="button" (click)="close()" aria-label="Fermer">
+      <i class="bi bi-x-lg" aria-hidden="true"></i>
+    </button>
+  </header>
+
+  <div class="account-dialog__copy">
+    <p>Espace personnel</p>
+    <h2 id="account-dialog-title">
+      {{ mode === 'login' ? 'Retrouvez vos listes.' : 'Gardez vos idées au même endroit.' }}
+    </h2>
+    <span>
+      {{ mode === 'login'
+        ? 'Connectez-vous pour reprendre une ancienne sélection.'
+        : 'La liste créée sur cet appareil sera automatiquement ajoutée à votre compte.' }}
+    </span>
+  </div>
+
+  <div class="account-dialog__tabs" aria-label="Connexion ou inscription">
+    <button type="button" [class.is-active]="mode === 'login'" (click)="switchMode('login')">Connexion</button>
+    <button type="button" [class.is-active]="mode === 'register'" (click)="switchMode('register')">Créer un compte</button>
+  </div>
+
+  <form (ngSubmit)="submit()" novalidate>
+    <label *ngIf="mode === 'register'">
+      <span>Votre prénom ou nom</span>
+      <input
+        type="text"
+        name="displayName"
+        maxlength="80"
+        autocomplete="name"
+        [(ngModel)]="displayName"
+        placeholder="Camille">
+    </label>
+    <label>
+      <span>Adresse email</span>
+      <input
+        type="email"
+        name="email"
+        maxlength="254"
+        autocomplete="email"
+        [(ngModel)]="email"
+        placeholder="camille@exemple.fr">
+    </label>
+    <label>
+      <span>Mot de passe</span>
+      <input
+        type="password"
+        name="password"
+        maxlength="128"
+        [attr.autocomplete]="mode === 'register' ? 'new-password' : 'current-password'"
+        [(ngModel)]="password"
+        placeholder="{{ mode === 'register' ? '10 caractères minimum' : 'Votre mot de passe' }}">
+    </label>
+
+    <p class="account-dialog__error" *ngIf="errorMessage" role="alert">
+      <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+      {{ errorMessage }}
+    </p>
+
+    <button type="submit" class="account-dialog__submit" [disabled]="isSubmitting">
+      <span>{{ isSubmitting ? 'Un instant…' : (mode === 'login' ? 'Se connecter' : 'Créer mon compte') }}</span>
+      <i class="bi bi-arrow-right" *ngIf="!isSubmitting" aria-hidden="true"></i>
+    </button>
+  </form>
+
+  <p class="account-dialog__guest-note">
+    Le compte reste facultatif : vous pouvez toujours créer et partager une liste sans vous inscrire.
+  </p>
+</section>

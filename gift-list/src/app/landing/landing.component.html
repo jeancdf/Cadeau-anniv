@@ -1,0 +1,69 @@
+<main class="landing">
+  <header class="landing__header">
+    <a class="landing-brand" routerLink="/" aria-label="Gift Finder, accueil">
+      <span class="landing-brand__mark"><i class="bi bi-gift" aria-hidden="true"></i></span>
+      <span>
+        <strong>Gift Finder</strong>
+        <small>Le cadeau qui tombe juste</small>
+      </span>
+    </a>
+    <div class="landing__actions">
+      <app-account-access></app-account-access>
+      <app-theme-toggle></app-theme-toggle>
+    </div>
+  </header>
+
+  <section class="landing-hero">
+    <div class="landing-hero__copy">
+      <p class="landing-eyebrow"><i class="bi bi-stars" aria-hidden="true"></i> Votre copilote cadeau</p>
+      <h1>Une liste personnelle,<br><em>sans tourner en rond.</em></h1>
+      <p class="landing-hero__intro">
+        Décrivez la personne, l’occasion ou simplement vos premières idées.
+        Gift Finder vous aide à construire une sélection claire, modifiable et prête à partager.
+      </p>
+      <div class="landing-hero__buttons">
+        <a class="landing-primary" routerLink="/creer">
+          Créer ma liste <i class="bi bi-arrow-right" aria-hidden="true"></i>
+        </a>
+        <span><i class="bi bi-check2" aria-hidden="true"></i> Aucun compte nécessaire pour commencer</span>
+      </div>
+    </div>
+
+    <div class="landing-preview" aria-label="Aperçu d’une liste Gift Finder">
+      <header class="landing-preview__header">
+        <div>
+          <span>Sélection en cours</span>
+          <h2>Anniversaire de Léa</h2>
+        </div>
+        <span class="landing-preview__count">3</span>
+      </header>
+      <ol>
+        <li>
+          <span class="landing-preview__number">01</span>
+          <div><strong>Atelier de céramique</strong><small>Une expérience créative à vivre à deux</small></div>
+          <i class="bi bi-check2" aria-hidden="true"></i>
+        </li>
+        <li>
+          <span class="landing-preview__number">02</span>
+          <div><strong>Livre photo personnalisé</strong><small>Pour rassembler les souvenirs importants</small></div>
+          <i class="bi bi-check2" aria-hidden="true"></i>
+        </li>
+        <li>
+          <span class="landing-preview__number">03</span>
+          <div><strong>Week-end nature</strong><small>Une vraie pause loin du quotidien</small></div>
+          <i class="bi bi-check2" aria-hidden="true"></i>
+        </li>
+      </ol>
+      <div class="landing-preview__share">
+        <span><i class="bi bi-link-45deg" aria-hidden="true"></i> gift-finder.fr/liste/lea-30-ans</span>
+        <i class="bi bi-copy" aria-hidden="true"></i>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-steps" aria-label="Comment ça marche">
+    <article><span>01</span><div><strong>Donnez le contexte</strong><p>Pour qui, quelle occasion, quel budget.</p></div></article>
+    <article><span>02</span><div><strong>Échangez avec l’IA</strong><p>Gardez, refusez et affinez les suggestions.</p></div></article>
+    <article><span>03</span><div><strong>Partagez votre sélection</strong><p>Un lien propre, avec les cadeaux et leurs accès.</p></div></article>
+  </section>
+</main>

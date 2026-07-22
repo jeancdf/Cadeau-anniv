@@ -12,6 +12,7 @@ import {
   toPublicSharedList
 } from '../services/shared-list-utils.js';
 import { fetchProductPreview } from '../services/product-preview.js';
+import { requireUser } from '../services/user-auth.js';
 
 const router = express.Router();
 const usageByIp = new Map();
@@ -143,7 +144,8 @@ router.post(
       const editToken = createEditToken();
       const sharedList = await SharedList.create({
         ...payload,
-        editTokenHash: hashEditToken(editToken)
+        editTokenHash: hashEditToken(editToken),
+        ownerId: req.user?.id || null
       });
 
       const response = {
@@ -186,16 +188,46 @@ router.put('/shared-lists/:slug', async (req, res) => {
       return res.status(404).json({ message: 'Cette liste n’existe pas ou plus' });
     }
 
-    if (!editTokensMatch(req.header('X-Edit-Token'), sharedList.editTokenHash)) {
+    const hasEditToken = !sharedList.ownerId
+      && editTokensMatch(req.header('X-Edit-Token'), sharedList.editTokenHash);
+    const isOwner = Boolean(req.user?.id && sharedList.ownerId === req.user.id);
+    if (!hasEditToken && !isOwner) {
       return res.status(403).json({ message: 'Vous ne pouvez pas modifier cette liste' });
     }
 
     const payload = normalizeSharedListPayload(req.body);
-    await sharedList.update(payload);
+    await sharedList.update({
+      ...payload,
+      ownerId: sharedList.ownerId || (hasEditToken ? req.user?.id : null) || null
+    });
     return res.json({ list: enrichPublicList(sharedList) });
   } catch (error) {
     console.error('Erreur lors de la republication de la liste:', error);
     return res.status(400).json({ message: error.message || 'Impossible de mettre à jour cette liste' });
+  }
+});
+
+router.post('/shared-lists/:slug/claim', requireUser, async (req, res) => {
+  try {
+    const slug = normalizeSlug(req.params.slug);
+    const sharedList = slug ? await SharedList.findOne({ where: { slug } }) : null;
+    if (!sharedList) {
+      return res.status(404).json({ message: 'Cette liste n’existe pas ou plus' });
+    }
+    if (sharedList.ownerId && sharedList.ownerId !== req.user.id) {
+      return res.status(409).json({ message: 'Cette liste appartient déjà à un autre compte' });
+    }
+    if (!sharedList.ownerId && !editTokensMatch(req.header('X-Edit-Token'), sharedList.editTokenHash)) {
+      return res.status(403).json({ message: 'Le secret d’édition de cette liste est invalide' });
+    }
+
+    if (!sharedList.ownerId) {
+      await sharedList.update({ ownerId: req.user.id });
+    }
+    return res.json({ list: enrichPublicList(sharedList) });
+  } catch (error) {
+    console.error('Erreur lors du rattachement de la liste:', error);
+    return res.status(500).json({ message: 'Impossible de rattacher cette liste au compte' });
   }
 });
 

@@ -279,6 +279,66 @@ app-gift-planner .restart-dialog__confirm {
   color: #fff;
 }
 
+app-gift-planner .publish-account {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1rem 0;
+  border: 1px solid color-mix(in srgb, var(--sage) 38%, var(--line));
+  border-radius: 12px;
+  padding: 0.85rem;
+  background: var(--sage-soft);
+  text-align: left;
+}
+
+app-gift-planner .publish-account > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.65rem;
+}
+
+app-gift-planner .publish-account > div > i {
+  color: var(--sage);
+}
+
+app-gift-planner .publish-account span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+app-gift-planner .publish-account strong {
+  color: var(--ink);
+  font-size: 0.75rem;
+}
+
+app-gift-planner .publish-account small {
+  color: var(--muted);
+  font-size: 0.67rem;
+  line-height: 1.4;
+}
+
+app-gift-planner .publish-account app-account-access {
+  width: 100%;
+}
+
+app-gift-planner .planner-resume-loading {
+  position: fixed;
+  z-index: 180;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: var(--paper);
+  color: var(--muted);
+}
+
+app-gift-planner .planner-resume-loading p {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
