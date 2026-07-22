@@ -129,6 +129,73 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+@media (min-width: 681px) and (max-height: 850px) {
+  app-gift-planner .onboarding {
+    padding-top: 0.75rem;
+    padding-bottom: 1rem;
+  }
+
+  app-gift-planner .onboarding__masthead {
+    margin-bottom: 1.15rem;
+  }
+
+  app-gift-planner .onboarding__intro {
+    margin-bottom: 1rem;
+  }
+
+  app-gift-planner .onboarding__intro h1 {
+    margin-bottom: 0.5rem;
+    font-size: clamp(2.3rem, 4vw, 3.2rem);
+  }
+
+  app-gift-planner .onboarding__intro > p {
+    max-width: 580px;
+    font-size: 0.9rem;
+  }
+
+  app-gift-planner .onboarding-card__header {
+    min-height: 64px;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+
+  app-gift-planner .choice-step {
+    padding: 1.1rem 1.4rem;
+  }
+
+  app-gift-planner .choice-step h2 {
+    font-size: clamp(1.55rem, 2.5vw, 1.9rem);
+  }
+
+  app-gift-planner .choice-step__help {
+    margin-top: 0.2rem;
+    margin-bottom: 0.9rem;
+  }
+
+  app-gift-planner .choice-grid {
+    gap: 0.55rem;
+  }
+
+  app-gift-planner .choice-card {
+    min-height: 100px;
+    padding: 0.9rem;
+  }
+
+  app-gift-planner .choice-card--compact {
+    min-height: 76px;
+    padding: 0.7rem 0.85rem;
+  }
+
+  app-gift-planner .choice-card__icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  app-gift-planner .onboarding__reassurance {
+    display: none;
+  }
+}
+
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,

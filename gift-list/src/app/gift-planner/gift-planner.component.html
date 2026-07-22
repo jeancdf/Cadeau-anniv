@@ -1,7 +1,4 @@
 <section class="planner" [class.planner--chat]="stage === 'chat'">
-  <div class="planner__ambient planner__ambient--one" aria-hidden="true"></div>
-  <div class="planner__ambient planner__ambient--two" aria-hidden="true"></div>
-
   <ng-container *ngIf="stage !== 'chat'; else chatWorkspace">
     <div class="onboarding">
       <div class="onboarding__masthead">
@@ -166,7 +163,7 @@
               <i class="bi bi-stars"></i>
             </span>
 
-            <div class="message__body">
+            <div class="message__body" [class.message__body--wide]="message.suggestions?.length">
               <div class="message__bubble">{{ message.content }}</div>
 
               <div class="suggestion-stack" *ngIf="message.suggestions?.length">

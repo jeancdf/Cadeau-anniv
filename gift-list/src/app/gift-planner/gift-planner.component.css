@@ -9,26 +9,6 @@
   overflow: hidden;
 }
 
-.planner__ambient {
-  display: none;
-}
-
-.planner__ambient--one {
-  width: 34rem;
-  height: 34rem;
-  top: -18rem;
-  left: -12rem;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-}
-
-.planner__ambient--two {
-  width: 30rem;
-  height: 30rem;
-  right: -14rem;
-  bottom: -16rem;
-  background: color-mix(in srgb, var(--sage) 11%, transparent);
-}
-
 .onboarding {
   width: min(1160px, calc(100% - 3rem));
   min-height: 100vh;
@@ -404,13 +384,12 @@
 }
 
 .workspace {
-  width: min(1440px, 100%);
+  width: 100%;
   height: 100vh;
   height: 100dvh;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
-  margin: 0 auto;
+  grid-template-columns: minmax(0, 1fr) clamp(360px, 28vw, 520px);
   background: var(--surface);
   overflow: hidden;
 }
@@ -432,7 +411,7 @@
   justify-content: space-between;
   gap: 1rem;
   border-bottom: 1px solid var(--line);
-  padding: 1rem clamp(1rem, 3vw, 2rem);
+  padding: 1rem clamp(1.25rem, 3.5vw, 4rem);
   background: var(--surface);
 }
 
@@ -515,7 +494,7 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  padding: 1.5rem clamp(1rem, 4vw, 3.5rem) 2rem;
+  padding: 1.75rem clamp(1.25rem, 5vw, 5.5rem) 2rem;
   scroll-behavior: smooth;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
@@ -560,7 +539,11 @@
 }
 
 .message__body {
-  max-width: min(680px, 84%);
+  max-width: min(880px, 88%);
+}
+
+.message__body--wide {
+  width: min(880px, 88%);
 }
 
 .message__bubble {
@@ -583,6 +566,7 @@
 
 .suggestion-stack {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: 0.65rem;
   margin-top: 0.7rem;
 }
@@ -733,7 +717,7 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin: 0 1.25rem 0.6rem;
+  margin: 0 clamp(1.25rem, 5vw, 5.5rem) 0.6rem;
   border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line));
   border-radius: 10px;
   padding: 0.6rem 0.75rem;
@@ -755,7 +739,7 @@
 
 .composer-wrap {
   border-top: 1px solid var(--line);
-  padding: 0.75rem clamp(1rem, 4vw, 3.5rem) 0.85rem;
+  padding: 0.75rem clamp(1.25rem, 5vw, 5.5rem) 0.85rem;
   background: var(--surface);
 }
 
@@ -835,7 +819,7 @@
   min-height: 0;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
-  padding: 1.5rem;
+  padding: clamp(1.4rem, 2.2vw, 2rem);
   background: var(--paper);
 }
 
@@ -1068,73 +1052,6 @@
   color: var(--muted);
   font-size: 0.63rem;
   text-align: center;
-}
-
-@media (min-width: 681px) and (max-height: 850px) {
-  .onboarding {
-    padding-top: 0.75rem;
-    padding-bottom: 1rem;
-  }
-
-  .onboarding__masthead {
-    margin-bottom: 1.15rem;
-  }
-
-  .onboarding__intro {
-    margin-bottom: 1rem;
-  }
-
-  .onboarding__intro h1 {
-    margin-bottom: 0.5rem;
-    font-size: clamp(2.3rem, 4vw, 3.2rem);
-  }
-
-  .onboarding__intro > p {
-    max-width: 580px;
-    font-size: 0.9rem;
-  }
-
-  .onboarding-card__header {
-    min-height: 64px;
-    padding-top: 0.55rem;
-    padding-bottom: 0.55rem;
-  }
-
-  .choice-step {
-    padding: 1.1rem 1.4rem;
-  }
-
-  .choice-step h2 {
-    font-size: clamp(1.55rem, 2.5vw, 1.9rem);
-  }
-
-  .choice-step__help {
-    margin-top: 0.2rem;
-    margin-bottom: 0.9rem;
-  }
-
-  .choice-grid {
-    gap: 0.55rem;
-  }
-
-  .choice-card {
-    min-height: 100px;
-    padding: 0.9rem;
-  }
-
-  .choice-card--compact {
-    min-height: 76px;
-    padding: 0.7rem 0.85rem;
-  }
-
-  .choice-card__icon {
-    width: 42px;
-    height: 42px;
-  }
-
-  .onboarding__reassurance {
-    display: none;
-  }
 }
 
 @media (max-width: 940px) {

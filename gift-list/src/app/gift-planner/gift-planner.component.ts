@@ -16,6 +16,7 @@ import {
 } from '../services/gift-planner.service';
 import { SharedListPayload, SharedListService } from '../services/shared-list.service';
 import { ThemeToggleComponent } from '../components/theme-toggle/theme-toggle.component';
+import { PLANNER_STORAGE_KEY } from './planner-storage';
 
 type PlannerStage = 'audience' | 'occasion' | 'start' | 'chat';
 
@@ -41,8 +42,6 @@ interface SavedPlannerState {
   sharedSlug?: string;
   sharedTitle?: string;
 }
-
-export const PLANNER_STORAGE_KEY = 'gift-finder-planner-v1';
 
 @Component({
   selector: 'app-gift-planner',

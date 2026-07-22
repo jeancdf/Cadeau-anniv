@@ -13,7 +13,7 @@
     <p class="shared-eyebrow">Lien introuvable</p>
     <h1>Cette liste n’existe pas ou plus.</h1>
     <p>Vérifiez l’adresse reçue ou demandez un nouveau lien à son auteur.</p>
-    <a class="button button--ink" routerLink="/">Créer ma propre liste</a>
+    <a class="button button--ink" routerLink="/" (click)="startNewList()">Créer ma propre liste</a>
   </section>
 
   <section class="shared-state" *ngIf="!isLoading && loadError" role="alert">
@@ -107,7 +107,7 @@
         <h2>Une occasion approche ?</h2>
         <p>Construisez une liste personnelle avec l’aide de Gift Finder.</p>
       </div>
-      <a class="button button--accent" routerLink="/">Créer ma liste</a>
+      <a class="button button--accent" routerLink="/" (click)="startNewList()">Créer ma liste</a>
     </aside>
   </ng-container>
 </main>

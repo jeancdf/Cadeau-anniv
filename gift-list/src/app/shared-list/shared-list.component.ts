@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SharedList, SharedListService, SharedShoppingLink } from '../services/shared-list.service';
 import { ThemeToggleComponent } from '../components/theme-toggle/theme-toggle.component';
+import { PLANNER_STORAGE_KEY } from '../gift-planner/planner-storage';
 
 @Component({
   selector: 'app-shared-list',
@@ -59,6 +60,10 @@ export class SharedListComponent implements OnInit {
 
   markImageAsFailed(index: number): void {
     this.failedImages.add(index);
+  }
+
+  startNewList(): void {
+    localStorage.removeItem(PLANNER_STORAGE_KEY);
   }
 
   trackShoppingLink(index: number, link: SharedShoppingLink): string {
