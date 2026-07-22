@@ -21,6 +21,8 @@ export interface PlannerGiftSuggestion {
   description: string;
   reason: string;
   budgetLabel: string;
+  productUrl?: string;
+  imageUrl?: string;
 }
 
 export interface PlannerChatResponse {

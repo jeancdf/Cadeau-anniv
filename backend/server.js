@@ -4,8 +4,10 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import giftRoutes from './routes/gifts.js';
 import aiRoutes from './routes/ai.js';
+import sharedListRoutes from './routes/shared-lists.js';
 import { sequelize, testConnection } from './config/database.js';
 import { syncGiftModel } from './models/gift.js';
+import { syncSharedListModel } from './models/shared-list.js';
 
 // Charger les variables d'environnement
 dotenv.config({ path: './config.env' });
@@ -79,6 +81,10 @@ app.post('/api/auth/login', (req, res) => {
   res.json(createAdminToken());
 });
 
+// Les listes partagees utilisent leur propre secret d'edition et restent
+// independantes de l'authentification d'administration historique.
+app.use('/api', sharedListRoutes);
+
 // La lecture de la liste et le nouveau chat de creation restent publics.
 // Les mutations d'administration et les anciens outils IA restent proteges.
 app.use((req, res, next) => {
@@ -113,7 +119,7 @@ const initializeServer = async () => {
     await testConnection();
     
     // Synchroniser les modèles avec la base de données
-    await syncGiftModel();
+    await Promise.all([syncGiftModel(), syncSharedListModel()]);
     
     // Démarrer le serveur
     app.listen(PORT, () => {

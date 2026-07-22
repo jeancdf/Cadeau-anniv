@@ -268,9 +268,15 @@
             <div class="draft-gift__copy">
               <strong>{{ gift.name }}</strong>
               <small>{{ gift.budgetLabel || gift.description }}</small>
-              <button type="button" (click)="refineGift(gift)">
-                <i class="bi bi-chat-left-text" aria-hidden="true"></i> Affiner avec l’IA
-              </button>
+              <div class="draft-gift__actions">
+                <button type="button" (click)="openGiftEditor(giftIndex)">
+                  <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                  {{ gift.productUrl || gift.imageUrl ? 'Modifier' : 'Compléter' }}
+                </button>
+                <button type="button" (click)="refineGift(gift)">
+                  <i class="bi bi-chat-left-text" aria-hidden="true"></i> Affiner
+                </button>
+              </div>
             </div>
             <button
               type="button"
@@ -281,6 +287,60 @@
             </button>
           </li>
         </ol>
+
+        <section class="gift-editor" *ngIf="giftDraft && editingGiftIndex !== null" aria-labelledby="gift-editor-title">
+          <header class="gift-editor__header">
+            <div>
+              <span>Cadeau {{ editingGiftIndex + 1 }}</span>
+              <h3 id="gift-editor-title">Préparer la vitrine</h3>
+            </div>
+            <button type="button" (click)="closeGiftEditor()" aria-label="Fermer l’éditeur du cadeau">
+              <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+          </header>
+
+          <div class="gift-editor__preview" *ngIf="giftDraft.imageUrl && !imagePreviewFailed">
+            <img [src]="giftDraft.imageUrl" [alt]="giftDraft.name" (error)="imagePreviewFailed = true">
+          </div>
+
+          <label class="planner-field">
+            <span>Nom</span>
+            <input type="text" maxlength="120" [(ngModel)]="giftDraft.name">
+          </label>
+          <label class="planner-field">
+            <span>Description</span>
+            <textarea rows="2" maxlength="300" [(ngModel)]="giftDraft.description"></textarea>
+          </label>
+          <label class="planner-field">
+            <span>Budget</span>
+            <input type="text" maxlength="80" [(ngModel)]="giftDraft.budgetLabel" placeholder="Ex. Environ 30 à 60 €">
+          </label>
+          <label class="planner-field">
+            <span>Lien produit</span>
+            <div class="product-link-field">
+              <input type="url" [(ngModel)]="giftDraft.productUrl" placeholder="https://…">
+              <button
+                type="button"
+                [disabled]="!giftDraft.productUrl || isLoadingPreview"
+                (click)="loadProductPreview()">
+                <span class="button-spinner" *ngIf="isLoadingPreview" aria-hidden="true"></span>
+                <i class="bi bi-stars" *ngIf="!isLoadingPreview" aria-hidden="true"></i>
+                Aperçu
+              </button>
+            </div>
+          </label>
+          <label class="planner-field">
+            <span>URL de l’image</span>
+            <input type="url" [(ngModel)]="giftDraft.imageUrl" (ngModelChange)="imagePreviewFailed = false" placeholder="https://…/image.jpg">
+          </label>
+
+          <p class="gift-editor__error" *ngIf="enrichmentError" role="alert">{{ enrichmentError }}</p>
+
+          <div class="gift-editor__actions">
+            <button type="button" class="gift-editor__save" (click)="saveGiftEditor()">Enregistrer</button>
+            <button type="button" class="gift-editor__cancel" (click)="closeGiftEditor()">Annuler</button>
+          </div>
+        </section>
 
         <footer class="draft-list__footer">
           <button
@@ -295,6 +355,85 @@
           <p *ngIf="selectedGifts.length >= 3">Belle base ! Vous pouvez continuer à l’affiner.</p>
         </footer>
       </aside>
+    </div>
+  </ng-template>
+</section>
+
+<div class="publish-backdrop" *ngIf="showShareModal" (click)="closeShareModal()"></div>
+<section
+  class="publish-dialog"
+  *ngIf="showShareModal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="publish-title">
+  <header class="publish-dialog__header">
+    <div>
+      <span>Vitrine publique</span>
+      <h2 id="publish-title">{{ currentSharedSlug ? 'Mettre à jour le lien' : 'Partager cette liste' }}</h2>
+    </div>
+    <button type="button" (click)="closeShareModal()" [disabled]="isPublishing" aria-label="Fermer">
+      <i class="bi bi-x-lg" aria-hidden="true"></i>
+    </button>
+  </header>
+
+  <ng-container *ngIf="!publishedUrl; else publicationSuccess">
+    <p class="publish-dialog__intro">
+      Les destinataires verront une galerie claire des {{ selectedGifts.length }} cadeau{{ selectedGifts.length > 1 ? 'x' : '' }} sélectionné{{ selectedGifts.length > 1 ? 's' : '' }}.
+    </p>
+
+    <label class="planner-field">
+      <span>Titre de la liste</span>
+      <input
+        type="text"
+        maxlength="120"
+        [ngModel]="shareTitle"
+        (ngModelChange)="updateShareTitle($event)"
+        placeholder="Les idées cadeaux de Léa">
+    </label>
+    <label class="planner-field">
+      <span>Lien personnalisé</span>
+      <div class="slug-field">
+        <span>/liste/</span>
+        <input
+          type="text"
+          maxlength="60"
+          [readOnly]="currentSharedSlug"
+          [ngModel]="shareSlug"
+          (ngModelChange)="updateShareSlug($event)"
+          placeholder="anniversaire-lea">
+      </div>
+      <small *ngIf="currentSharedSlug">Le lien reste identique lors des mises à jour.</small>
+    </label>
+
+    <p class="publish-dialog__error" *ngIf="publishError" role="alert">
+      <i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ publishError }}
+    </p>
+
+    <button type="button" class="publish-dialog__submit" [disabled]="isPublishing" (click)="publishList()">
+      <span class="button-spinner" *ngIf="isPublishing" aria-hidden="true"></span>
+      <i class="bi bi-send" *ngIf="!isPublishing" aria-hidden="true"></i>
+      {{ isPublishing ? 'Publication…' : (currentSharedSlug ? 'Mettre à jour la vitrine' : 'Créer le lien public') }}
+    </button>
+  </ng-container>
+
+  <ng-template #publicationSuccess>
+    <div class="publish-success">
+      <span class="publish-success__icon"><i class="bi bi-check2" aria-hidden="true"></i></span>
+      <h3>La vitrine est prête.</h3>
+      <p>Ce lien montre uniquement les cadeaux, sans la conversation ni les outils de création.</p>
+      <div class="published-link">
+        <input type="text" readonly [value]="publishedUrl" aria-label="Lien public de la liste">
+        <button type="button" (click)="copyPublishedLink()" aria-label="Copier le lien">
+          <i class="bi bi-copy" aria-hidden="true"></i>
+        </button>
+      </div>
+      <p class="publish-dialog__error" *ngIf="publishError" role="alert">{{ publishError }}</p>
+      <button type="button" class="publish-dialog__submit" (click)="sharePublishedLink()">
+        <i class="bi bi-send" aria-hidden="true"></i> {{ shareLabel }}
+      </button>
+      <a class="publish-preview-link" [href]="publishedUrl" target="_blank" rel="noopener noreferrer">
+        Ouvrir la vitrine <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+      </a>
     </div>
   </ng-template>
 </section>

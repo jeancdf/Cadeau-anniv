@@ -14,6 +14,7 @@ import {
   PlannerGiftSuggestion,
   PlannerProfile
 } from '../services/gift-planner.service';
+import { SharedListPayload, SharedListService } from '../services/shared-list.service';
 
 type PlannerStage = 'audience' | 'occasion' | 'start' | 'chat';
 
@@ -36,6 +37,8 @@ interface SavedPlannerState {
   messages: ChatMessage[];
   selectedGifts: PlannerGiftSuggestion[];
   profileSummary: string;
+  sharedSlug?: string;
+  sharedTitle?: string;
 }
 
 const STORAGE_KEY = 'gift-finder-planner-v1';
@@ -112,11 +115,28 @@ export class GiftPlannerComponent implements AfterViewChecked {
   isMobileListOpen = false;
   errorMessage = '';
   shareLabel = 'Partager';
+  editingGiftIndex: number | null = null;
+  giftDraft: PlannerGiftSuggestion | null = null;
+  isLoadingPreview = false;
+  enrichmentError = '';
+  imagePreviewFailed = false;
+  showShareModal = false;
+  shareTitle = '';
+  shareSlug = '';
+  shareSlugTouched = false;
+  isPublishing = false;
+  publishError = '';
+  publishedUrl = '';
+  currentSharedSlug = '';
+  currentSharedTitle = '';
 
   private nextMessageId = 1;
   private shouldScroll = false;
 
-  constructor(private readonly plannerService: GiftPlannerService) {
+  constructor(
+    private readonly plannerService: GiftPlannerService,
+    private readonly sharedListService: SharedListService
+  ) {
     this.restoreState();
   }
 
@@ -240,6 +260,11 @@ export class GiftPlannerComponent implements AfterViewChecked {
 
   removeGift(index: number): void {
     this.selectedGifts = this.selectedGifts.filter((_, giftIndex) => giftIndex !== index);
+    if (this.editingGiftIndex === index) {
+      this.closeGiftEditor();
+    } else if (this.editingGiftIndex !== null && this.editingGiftIndex > index) {
+      this.editingGiftIndex -= 1;
+    }
     this.persistState();
   }
 
@@ -255,6 +280,92 @@ export class GiftPlannerComponent implements AfterViewChecked {
   refineGift(gift: PlannerGiftSuggestion): void {
     this.draftMessage = `Affinons l’idée « ${gift.name} ». `;
     this.focusComposer();
+  }
+
+  openGiftEditor(index: number): void {
+    const gift = this.selectedGifts[index];
+    if (!gift) {
+      return;
+    }
+    this.editingGiftIndex = index;
+    this.giftDraft = {
+      ...gift,
+      productUrl: gift.productUrl || '',
+      imageUrl: gift.imageUrl || ''
+    };
+    this.enrichmentError = '';
+    this.imagePreviewFailed = false;
+  }
+
+  closeGiftEditor(): void {
+    this.editingGiftIndex = null;
+    this.giftDraft = null;
+    this.enrichmentError = '';
+    this.imagePreviewFailed = false;
+  }
+
+  loadProductPreview(): void {
+    const productUrl = this.giftDraft?.productUrl?.trim();
+    if (!this.giftDraft || !productUrl || this.isLoadingPreview) {
+      return;
+    }
+
+    this.isLoadingPreview = true;
+    this.enrichmentError = '';
+    this.sharedListService.previewProduct(productUrl).pipe(
+      finalize(() => {
+        this.isLoadingPreview = false;
+      })
+    ).subscribe({
+      next: preview => {
+        if (!this.giftDraft) {
+          return;
+        }
+        this.giftDraft.productUrl = preview.productUrl;
+        this.giftDraft.name = this.giftDraft.name.trim() || preview.title || this.giftDraft.name;
+        if (!this.giftDraft.imageUrl && preview.imageUrl) {
+          this.giftDraft.imageUrl = preview.imageUrl;
+        }
+        this.imagePreviewFailed = false;
+        if (!preview.imageUrl) {
+          this.enrichmentError = 'Aucune image détectée. Vous pouvez coller une URL d’image manuellement.';
+        }
+      },
+      error: error => {
+        this.enrichmentError = error?.error?.message || 'Impossible de récupérer l’aperçu de ce produit.';
+      }
+    });
+  }
+
+  saveGiftEditor(): void {
+    if (this.editingGiftIndex === null || !this.giftDraft) {
+      return;
+    }
+
+    const name = this.giftDraft.name.trim();
+    if (!name) {
+      this.enrichmentError = 'Le cadeau doit conserver un nom.';
+      return;
+    }
+    if (!this.isValidOptionalUrl(this.giftDraft.productUrl) || !this.isValidOptionalUrl(this.giftDraft.imageUrl)) {
+      this.enrichmentError = 'Les liens doivent être des adresses HTTP(S) valides.';
+      return;
+    }
+
+    this.selectedGifts = this.selectedGifts.map((gift, index) => index === this.editingGiftIndex
+      ? {
+          ...gift,
+          ...this.giftDraft,
+          name,
+          description: this.giftDraft?.description.trim() || '',
+          reason: this.giftDraft?.reason.trim() || '',
+          budgetLabel: this.giftDraft?.budgetLabel.trim() || '',
+          productUrl: this.giftDraft?.productUrl?.trim() || '',
+          imageUrl: this.giftDraft?.imageUrl?.trim() || ''
+        }
+      : gift);
+    this.closeGiftEditor();
+    this.persistState();
   }
 
   trackMessage(_: number, message: ChatMessage): number {
@@ -279,30 +390,128 @@ export class GiftPlannerComponent implements AfterViewChecked {
     this.draftMessage = '';
     this.errorMessage = '';
     this.isMobileListOpen = false;
+    this.currentSharedSlug = '';
+    this.currentSharedTitle = '';
+    this.closeGiftEditor();
+    this.closeShareModal();
     this.nextMessageId = 1;
     localStorage.removeItem(STORAGE_KEY);
   }
 
-  async shareDraft(): Promise<void> {
+  shareDraft(): void {
     if (!this.selectedGifts.length) {
       return;
     }
 
-    const giftNames = this.selectedGifts.map(gift => `• ${gift.name}`).join('\n');
-    const shareText = `Ma liste Gift Finder (${this.occasionLabel})\n\n${giftNames}`;
+    this.showShareModal = true;
+    this.publishError = '';
+    this.publishedUrl = '';
+    this.shareTitle = this.currentSharedTitle || `Ma liste — ${this.occasionLabel || 'Mes idées cadeaux'}`;
+    this.shareSlug = this.currentSharedSlug || this.normalizeSlug(this.shareTitle);
+    this.shareSlugTouched = Boolean(this.currentSharedSlug);
+  }
+
+  updateShareTitle(value: string): void {
+    this.shareTitle = value;
+    if (!this.shareSlugTouched && !this.currentSharedSlug) {
+      this.shareSlug = this.normalizeSlug(value);
+    }
+  }
+
+  updateShareSlug(value: string): void {
+    this.shareSlugTouched = true;
+    this.shareSlug = this.normalizeSlug(value);
+  }
+
+  closeShareModal(): void {
+    if (this.isPublishing) {
+      return;
+    }
+    this.showShareModal = false;
+    this.publishError = '';
+    this.publishedUrl = '';
+  }
+
+  publishList(): void {
+    const title = this.shareTitle.trim();
+    const slug = this.normalizeSlug(this.shareSlug);
+    if (!title) {
+      this.publishError = 'Donnez un titre à la liste.';
+      return;
+    }
+    if (slug.length < 3) {
+      this.publishError = 'Le lien personnalisé doit contenir au moins 3 caractères.';
+      return;
+    }
+    if (this.currentSharedSlug && !this.sharedListService.hasEditToken(this.currentSharedSlug)) {
+      this.publishError = 'Le secret d’édition de cette liste n’est plus disponible dans ce navigateur.';
+      return;
+    }
+
+    const payload: SharedListPayload = {
+      title,
+      occasion: this.occasionLabel,
+      gifts: this.selectedGifts.map(gift => ({
+        name: gift.name,
+        description: gift.description || '',
+        reason: gift.reason || '',
+        budgetLabel: gift.budgetLabel || '',
+        productUrl: gift.productUrl || '',
+        imageUrl: gift.imageUrl || ''
+      }))
+    };
+    const request = this.currentSharedSlug
+      ? this.sharedListService.updateSharedList(this.currentSharedSlug, payload)
+      : this.sharedListService.createSharedList({ ...payload, slug });
+
+    this.isPublishing = true;
+    this.publishError = '';
+    request.pipe(finalize(() => {
+      this.isPublishing = false;
+    })).subscribe({
+      next: response => {
+        this.currentSharedSlug = response.list.slug;
+        this.currentSharedTitle = response.list.title;
+        this.shareSlug = response.list.slug;
+        this.shareTitle = response.list.title;
+        this.publishedUrl = this.sharedListService.getPublicUrl(response.list.slug);
+        this.persistState();
+      },
+      error: error => {
+        this.publishError = error?.error?.message || 'Impossible de publier cette liste pour le moment.';
+      }
+    });
+  }
+
+  async sharePublishedLink(): Promise<void> {
+    if (!this.publishedUrl) {
+      return;
+    }
 
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'Ma liste Gift Finder', text: shareText });
+        await navigator.share({ title: this.shareTitle, url: this.publishedUrl });
+        this.shareLabel = 'Lien partagé !';
       } else {
-        await navigator.clipboard.writeText(shareText);
-        this.shareLabel = 'Liste copiée !';
-        window.setTimeout(() => this.shareLabel = 'Partager', 2200);
+        await this.copyPublishedLink();
       }
     } catch (error) {
       if ((error as DOMException)?.name !== 'AbortError') {
-        this.errorMessage = 'Impossible de partager pour le moment. Réessayez dans quelques instants.';
+        this.publishError = 'Impossible de partager le lien. Vous pouvez le copier manuellement.';
       }
+    }
+  }
+
+  async copyPublishedLink(): Promise<void> {
+    if (!this.publishedUrl) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(this.publishedUrl);
+      this.shareLabel = 'Lien copié !';
+      window.setTimeout(() => this.shareLabel = 'Partager', 2200);
+    } catch {
+      this.publishError = 'La copie automatique est bloquée. Sélectionnez le lien ci-dessus.';
     }
   }
 
@@ -382,7 +591,9 @@ export class GiftPlannerComponent implements AfterViewChecked {
       profile: this.profile,
       messages: this.messages,
       selectedGifts: this.selectedGifts,
-      profileSummary: this.profileSummary
+      profileSummary: this.profileSummary,
+      sharedSlug: this.currentSharedSlug,
+      sharedTitle: this.currentSharedTitle
     };
 
     try {
@@ -409,10 +620,35 @@ export class GiftPlannerComponent implements AfterViewChecked {
       this.messages = Array.isArray(state.messages) ? state.messages : [];
       this.selectedGifts = Array.isArray(state.selectedGifts) ? state.selectedGifts : [];
       this.profileSummary = state.profileSummary || '';
+      this.currentSharedSlug = state.sharedSlug || '';
+      this.currentSharedTitle = state.sharedTitle || '';
       this.nextMessageId = Math.max(0, ...this.messages.map(message => Number(message.id) || 0)) + 1;
       this.shouldScroll = this.stage === 'chat';
     } catch {
       localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+
+  private normalizeSlug(value: string): string {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60)
+      .replace(/-+$/g, '');
+  }
+
+  private isValidOptionalUrl(value?: string): boolean {
+    if (!value?.trim()) {
+      return true;
+    }
+    try {
+      const url = new URL(value);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+      return false;
     }
   }
 }

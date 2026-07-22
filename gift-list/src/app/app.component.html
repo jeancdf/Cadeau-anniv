@@ -11,7 +11,7 @@
     <div class="site-header__actions">
       <button type="button" class="new-list-button" (click)="startNewList()">
         <i class="bi bi-plus-lg" aria-hidden="true"></i>
-        <span>Nouvelle liste</span>
+        <span>{{ isSharedListRoute ? 'Créer ma liste' : 'Nouvelle liste' }}</span>
       </button>
       <app-theme-toggle></app-theme-toggle>
     </div>
@@ -19,7 +19,7 @@
 </header>
 
 <main>
-  <app-gift-planner></app-gift-planner>
+  <router-outlet (activate)="onRouteActivate($event)"></router-outlet>
 </main>
 
 <footer class="site-footer">

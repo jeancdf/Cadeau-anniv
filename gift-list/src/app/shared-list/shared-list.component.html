@@ -1,0 +1,86 @@
+<main class="shared-page">
+  <div class="shared-loading" *ngIf="isLoading" aria-live="polite">
+    <span class="large-spinner" aria-hidden="true"></span>
+    <p>Ouverture de la liste…</p>
+  </div>
+
+  <section class="shared-state" *ngIf="!isLoading && notFound">
+    <span class="shared-state__icon"><i class="bi bi-link-45deg" aria-hidden="true"></i></span>
+    <p class="shared-eyebrow">Lien introuvable</p>
+    <h1>Cette liste n’existe pas ou plus.</h1>
+    <p>Vérifiez l’adresse reçue ou demandez un nouveau lien à son auteur.</p>
+    <a class="button button--ink" routerLink="/">Créer ma propre liste</a>
+  </section>
+
+  <section class="shared-state" *ngIf="!isLoading && loadError" role="alert">
+    <span class="shared-state__icon"><i class="bi bi-cloud-slash" aria-hidden="true"></i></span>
+    <p class="shared-eyebrow">Connexion interrompue</p>
+    <h1>La liste reste emballée pour le moment.</h1>
+    <p>{{ loadError }}</p>
+    <button type="button" class="button button--ink" (click)="ngOnInit()">Réessayer</button>
+  </section>
+
+  <ng-container *ngIf="!isLoading && sharedList as list">
+    <header class="shared-intro">
+      <div>
+        <p class="shared-eyebrow">
+          <span *ngIf="list.occasion">{{ list.occasion }}</span>
+          <span>{{ list.gifts.length }} idée{{ list.gifts.length > 1 ? 's' : '' }} cadeau</span>
+        </p>
+        <h1>{{ list.title }}</h1>
+        <p class="shared-intro__copy">
+          Une sélection personnelle à parcourir tranquillement. Chaque lien ouvre le produit dans un nouvel onglet.
+        </p>
+      </div>
+      <div class="shared-intro__mark" aria-hidden="true">
+        <i class="bi bi-gift"></i>
+      </div>
+    </header>
+
+    <section class="gift-gallery" aria-label="Cadeaux de la liste">
+      <article class="public-gift" *ngFor="let gift of list.gifts; let giftIndex = index">
+        <div class="public-gift__visual" [class.public-gift__visual--fallback]="!gift.imageUrl || failedImages.has(giftIndex)">
+          <img
+            *ngIf="gift.imageUrl && !failedImages.has(giftIndex)"
+            [src]="gift.imageUrl"
+            [alt]="gift.name"
+            loading="lazy"
+            (error)="markImageAsFailed(giftIndex)">
+          <div class="gift-fallback" *ngIf="!gift.imageUrl || failedImages.has(giftIndex)" aria-hidden="true">
+            <span>{{ (giftIndex + 1).toString().padStart(2, '0') }}</span>
+            <i class="bi bi-gift"></i>
+          </div>
+          <span class="public-gift__budget" *ngIf="gift.budgetLabel">{{ gift.budgetLabel }}</span>
+        </div>
+
+        <div class="public-gift__content">
+          <div class="public-gift__number">Idée {{ (giftIndex + 1).toString().padStart(2, '0') }}</div>
+          <h2>{{ gift.name }}</h2>
+          <p class="public-gift__description" *ngIf="gift.description">{{ gift.description }}</p>
+          <p class="public-gift__reason" *ngIf="gift.reason">
+            <i class="bi bi-stars" aria-hidden="true"></i>
+            <span>{{ gift.reason }}</span>
+          </p>
+          <a
+            *ngIf="gift.productUrl"
+            class="public-gift__link"
+            [href]="gift.productUrl"
+            target="_blank"
+            rel="noopener noreferrer">
+            Voir le cadeau <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+          </a>
+          <span class="public-gift__unlinked" *ngIf="!gift.productUrl">Idée à chercher librement</span>
+        </div>
+      </article>
+    </section>
+
+    <aside class="shared-cta">
+      <div>
+        <p class="shared-eyebrow">À votre tour</p>
+        <h2>Une occasion approche ?</h2>
+        <p>Construisez une liste personnelle avec l’aide de Gift Finder.</p>
+      </div>
+      <a class="button button--accent" routerLink="/">Créer ma liste</a>
+    </aside>
+  </ng-container>
+</main>
