@@ -34,7 +34,7 @@
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: clamp(1.2rem, 3vh, 2rem) 0 2.5rem;
+  padding: clamp(1rem, 2.5vh, 1.75rem) 0 1.5rem;
 }
 
 .onboarding__masthead {
@@ -42,7 +42,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: clamp(2.4rem, 6vh, 4.5rem);
+  margin-bottom: clamp(1.5rem, 3.5vh, 2.25rem);
 }
 
 .onboarding__identity {
@@ -115,7 +115,7 @@
 
 .onboarding__intro {
   max-width: 800px;
-  margin: 0 auto 2.2rem;
+  margin: 0 auto 1.6rem;
   text-align: center;
 }
 
@@ -123,7 +123,7 @@
   margin: 0 0 0.9rem;
   color: var(--ink);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2.45rem, 5.2vw, 4.6rem);
+  font-size: clamp(2.35rem, 4.7vw, 4rem);
   font-weight: 400;
   letter-spacing: -0.045em;
   line-height: 0.98;
@@ -153,7 +153,7 @@
 
 .onboarding-card__header {
   position: relative;
-  min-height: 84px;
+  min-height: 74px;
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--line);
@@ -276,7 +276,7 @@
 }
 
 .choice-step {
-  padding: clamp(1.6rem, 4vw, 3rem);
+  padding: clamp(1.4rem, 3vw, 2.25rem);
 }
 
 .choice-step__eyebrow {
@@ -319,7 +319,7 @@
 
 .choice-card {
   position: relative;
-  min-height: 144px;
+  min-height: 128px;
   display: flex;
   align-items: flex-start;
   gap: 1rem;
@@ -341,7 +341,7 @@
 }
 
 .choice-card--compact {
-  min-height: 104px;
+  min-height: 92px;
   align-items: center;
   padding: 1rem 1.1rem;
 }
@@ -388,7 +388,7 @@
   justify-content: center;
   flex-wrap: wrap;
   gap: 1.5rem;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
   color: var(--muted);
   font-size: 0.74rem;
 }
@@ -1068,6 +1068,73 @@
   color: var(--muted);
   font-size: 0.63rem;
   text-align: center;
+}
+
+@media (min-width: 681px) and (max-height: 850px) {
+  .onboarding {
+    padding-top: 0.75rem;
+    padding-bottom: 1rem;
+  }
+
+  .onboarding__masthead {
+    margin-bottom: 1.15rem;
+  }
+
+  .onboarding__intro {
+    margin-bottom: 1rem;
+  }
+
+  .onboarding__intro h1 {
+    margin-bottom: 0.5rem;
+    font-size: clamp(2.3rem, 4vw, 3.2rem);
+  }
+
+  .onboarding__intro > p {
+    max-width: 580px;
+    font-size: 0.9rem;
+  }
+
+  .onboarding-card__header {
+    min-height: 64px;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+
+  .choice-step {
+    padding: 1.1rem 1.4rem;
+  }
+
+  .choice-step h2 {
+    font-size: clamp(1.55rem, 2.5vw, 1.9rem);
+  }
+
+  .choice-step__help {
+    margin-top: 0.2rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .choice-grid {
+    gap: 0.55rem;
+  }
+
+  .choice-card {
+    min-height: 100px;
+    padding: 0.9rem;
+  }
+
+  .choice-card--compact {
+    min-height: 76px;
+    padding: 0.7rem 0.85rem;
+  }
+
+  .choice-card__icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .onboarding__reassurance {
+    display: none;
+  }
 }
 
 @media (max-width: 940px) {
