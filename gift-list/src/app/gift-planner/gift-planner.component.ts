@@ -41,7 +41,7 @@ interface SavedPlannerState {
   sharedTitle?: string;
 }
 
-const STORAGE_KEY = 'gift-finder-planner-v1';
+export const PLANNER_STORAGE_KEY = 'gift-finder-planner-v1';
 
 @Component({
   selector: 'app-gift-planner',
@@ -53,6 +53,12 @@ const STORAGE_KEY = 'gift-finder-planner-v1';
 export class GiftPlannerComponent implements AfterViewChecked {
   @ViewChild('messageList') private messageList?: ElementRef<HTMLElement>;
   @ViewChild('messageInput') private messageInput?: ElementRef<HTMLTextAreaElement>;
+
+  readonly plannerSteps = [
+    { number: 1, label: 'Pour qui' },
+    { number: 2, label: 'Occasion' },
+    { number: 3, label: 'Démarrage' }
+  ];
 
   readonly audienceChoices: Choice<'self' | 'other'>[] = [
     {
@@ -395,7 +401,7 @@ export class GiftPlannerComponent implements AfterViewChecked {
     this.closeGiftEditor();
     this.closeShareModal();
     this.nextMessageId = 1;
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PLANNER_STORAGE_KEY);
   }
 
   shareDraft(): void {
@@ -451,6 +457,7 @@ export class GiftPlannerComponent implements AfterViewChecked {
     const payload: SharedListPayload = {
       title,
       occasion: this.occasionLabel,
+      audienceLabel: this.audienceLabel,
       gifts: this.selectedGifts.map(gift => ({
         name: gift.name,
         description: gift.description || '',
@@ -597,7 +604,7 @@ export class GiftPlannerComponent implements AfterViewChecked {
     };
 
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(PLANNER_STORAGE_KEY, JSON.stringify(state));
     } catch {
       // The planner remains usable when storage is unavailable.
     }
@@ -605,7 +612,7 @@ export class GiftPlannerComponent implements AfterViewChecked {
 
   private restoreState(): void {
     try {
-      const rawState = localStorage.getItem(STORAGE_KEY);
+      const rawState = localStorage.getItem(PLANNER_STORAGE_KEY);
       if (!rawState) {
         return;
       }
@@ -625,7 +632,7 @@ export class GiftPlannerComponent implements AfterViewChecked {
       this.nextMessageId = Math.max(0, ...this.messages.map(message => Number(message.id) || 0)) + 1;
       this.shouldScroll = this.stage === 'chat';
     } catch {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PLANNER_STORAGE_KEY);
     }
   }
 

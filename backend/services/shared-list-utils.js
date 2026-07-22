@@ -86,6 +86,7 @@ export const normalizeSharedListPayload = (body, { requireSlug = false } = {}) =
   const payload = {
     title,
     occasion: cleanText(body?.occasion, 80),
+    audienceLabel: cleanText(body?.audienceLabel, 80),
     gifts: normalizeSharedGifts(body?.gifts)
   };
 
@@ -120,6 +121,7 @@ export const toPublicSharedList = (sharedList) => {
     slug: source.slug,
     title: source.title,
     occasion: source.occasion || '',
+    audienceLabel: source.audienceLabel || '',
     gifts: Array.isArray(source.gifts) ? source.gifts : [],
     createdAt: source.createdAt,
     updatedAt: source.updatedAt

@@ -14,6 +14,97 @@ import { fetchProductPreview } from '../services/product-preview.js';
 const router = express.Router();
 const usageByIp = new Map();
 
+const trimText = (value, maximumLength) => String(value || '').trim().slice(0, maximumLength);
+
+const normalizeAffiliateUrl = (value) => {
+  try {
+    const parsedUrl = new URL(String(value || '').trim());
+    return ['http:', 'https:'].includes(parsedUrl.protocol) ? parsedUrl.toString().slice(0, 2000) : '';
+  } catch {
+    return '';
+  }
+};
+
+const applyAffiliateTemplate = (destination, query, template) => {
+  const cleanTemplate = trimText(template, 2000);
+  if (!cleanTemplate || !cleanTemplate.includes('{url}')) {
+    return { url: destination, isAffiliate: false };
+  }
+
+  const affiliateUrl = cleanTemplate
+    .replaceAll('{url}', encodeURIComponent(destination))
+    .replaceAll('{query}', encodeURIComponent(query));
+  const normalizedUrl = normalizeAffiliateUrl(affiliateUrl);
+  return normalizedUrl
+    ? { url: normalizedUrl, isAffiliate: true }
+    : { url: destination, isAffiliate: false };
+};
+
+export const buildShoppingLinks = (giftName) => {
+  const encodedName = encodeURIComponent(giftName);
+  const amazonUrl = new URL(`https://www.amazon.fr/s?k=${encodedName}`);
+  const amazonTag = trimText(process.env.AMAZON_AFFILIATE_TAG, 64);
+  if (/^[A-Za-z0-9-]+$/.test(amazonTag)) {
+    amazonUrl.searchParams.set('tag', amazonTag);
+  }
+
+  const fnacDestination = `https://www.fnac.com/SearchResult/ResultList.aspx?Search=${encodedName}`;
+  const cdiscountDestination = `https://www.cdiscount.com/search/10/${encodedName}.html`;
+  const fnacLink = applyAffiliateTemplate(
+    fnacDestination,
+    giftName,
+    process.env.FNAC_AFFILIATE_URL_TEMPLATE
+  );
+  const cdiscountLink = applyAffiliateTemplate(
+    cdiscountDestination,
+    giftName,
+    process.env.CDISCOUNT_AFFILIATE_URL_TEMPLATE
+  );
+
+  return [
+    {
+      merchant: 'Amazon.fr',
+      label: 'Rechercher sur Amazon',
+      url: amazonUrl.toString(),
+      isAffiliate: amazonUrl.searchParams.has('tag')
+    },
+    { merchant: 'Fnac', label: 'Rechercher sur Fnac', ...fnacLink },
+    { merchant: 'Cdiscount', label: 'Rechercher sur Cdiscount', ...cdiscountLink }
+  ];
+};
+
+export const normalizeGifts = (gifts) => {
+  if (!Array.isArray(gifts)) {
+    return [];
+  }
+
+  return gifts
+    .slice(0, 20)
+    .map((gift) => {
+      const name = trimText(gift?.name, 120);
+      return {
+        name,
+        description: trimText(gift?.description, 300),
+        reason: trimText(gift?.reason, 240),
+        budgetLabel: trimText(gift?.budgetLabel, 80),
+        shoppingLinks: name ? buildShoppingLinks(name) : []
+      };
+    })
+    .filter((gift) => gift.name);
+};
+
+const enrichPublicList = (sharedList) => {
+  const publicList = toPublicSharedList(sharedList);
+  return {
+    ...publicList,
+    publicId: publicList.slug,
+    gifts: publicList.gifts.map(gift => ({
+      ...gift,
+      shoppingLinks: buildShoppingLinks(gift.name)
+    }))
+  };
+};
+
 const createRateLimit = ({ keyPrefix, windowMs, maximum }) => (req, res, next) => {
   const now = Date.now();
   const key = `${keyPrefix}:${req.ip || req.socket?.remoteAddress || 'unknown'}`;
@@ -45,7 +136,7 @@ router.post(
       });
 
       return res.status(201).json({
-        list: toPublicSharedList(sharedList),
+        list: enrichPublicList(sharedList),
         editToken
       });
     } catch (error) {
@@ -65,7 +156,8 @@ router.get('/shared-lists/:slug', async (req, res) => {
     if (!sharedList) {
       return res.status(404).json({ message: 'Cette liste n’existe pas ou plus' });
     }
-    return res.json(toPublicSharedList(sharedList));
+    res.set('Cache-Control', 'public, max-age=60');
+    return res.json(enrichPublicList(sharedList));
   } catch (error) {
     console.error('Erreur lors de la lecture de la liste partagée:', error);
     return res.status(500).json({ message: 'Impossible de charger cette liste' });
@@ -86,7 +178,7 @@ router.put('/shared-lists/:slug', async (req, res) => {
 
     const payload = normalizeSharedListPayload(req.body);
     await sharedList.update(payload);
-    return res.json({ list: toPublicSharedList(sharedList) });
+    return res.json({ list: enrichPublicList(sharedList) });
   } catch (error) {
     console.error('Erreur lors de la republication de la liste:', error);
     return res.status(400).json({ message: error.message || 'Impossible de mettre à jour cette liste' });

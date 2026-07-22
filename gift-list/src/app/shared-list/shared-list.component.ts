@@ -1,9 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { SharedList, SharedListService } from '../services/shared-list.service';
+import { SharedList, SharedListService, SharedShoppingLink } from '../services/shared-list.service';
 
 @Component({
   selector: 'app-shared-list',
@@ -18,6 +17,7 @@ export class SharedListComponent implements OnInit {
   notFound = false;
   loadError = '';
   failedImages = new Set<number>();
+  private currentSlug = '';
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -26,19 +26,23 @@ export class SharedListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.route.paramMap.pipe(
-      switchMap(params => {
-        this.isLoading = true;
-        this.notFound = false;
-        this.loadError = '';
-        this.failedImages.clear();
-        return this.sharedListService.getSharedList(params.get('slug') || '');
-      }),
-      finalize(() => {
-        this.isLoading = false;
-      }),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        this.currentSlug = params.get('slug') || '';
+        this.loadList();
+      });
+  }
+
+  loadList(): void {
+    this.isLoading = true;
+    this.notFound = false;
+    this.loadError = '';
+    this.failedImages.clear();
+
+    this.sharedListService.getSharedList(this.currentSlug)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: sharedList => {
         this.sharedList = sharedList;
         this.isLoading = false;
@@ -54,5 +58,9 @@ export class SharedListComponent implements OnInit {
 
   markImageAsFailed(index: number): void {
     this.failedImages.add(index);
+  }
+
+  trackShoppingLink(index: number, link: SharedShoppingLink): string {
+    return `${link.merchant}-${index}`;
   }
 }

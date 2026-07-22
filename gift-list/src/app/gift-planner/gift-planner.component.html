@@ -29,12 +29,21 @@
             aria-label="Revenir à l’étape précédente">
             <i class="bi bi-arrow-left" aria-hidden="true"></i>
           </button>
-          <div>
-            <span>Étape {{ stepNumber }} sur 3</span>
-            <div class="progress" aria-hidden="true">
-              <i *ngFor="let item of [1, 2, 3]" [class.is-active]="item <= stepNumber"></i>
-            </div>
-          </div>
+          <nav class="step-counter" aria-label="Progression de la création de la liste">
+            <ol>
+              <li
+                *ngFor="let step of plannerSteps"
+                [class.is-complete]="step.number < stepNumber"
+                [class.is-current]="step.number === stepNumber"
+                [attr.aria-current]="step.number === stepNumber ? 'step' : null">
+                <span class="step-counter__marker">
+                  <i *ngIf="step.number < stepNumber" class="bi bi-check-lg" aria-hidden="true"></i>
+                  <span *ngIf="step.number >= stepNumber">{{ step.number }}</span>
+                </span>
+                <span class="step-counter__label">{{ step.label }}</span>
+              </li>
+            </ol>
+          </nav>
         </header>
 
         <div *ngIf="stage === 'audience'" class="choice-step">
@@ -346,13 +355,16 @@
           <button
             type="button"
             class="share-button"
-            [disabled]="!selectedGifts.length"
+            [disabled]="!selectedGifts.length || isPublishing"
             (click)="shareDraft()">
-            <i class="bi bi-send" aria-hidden="true"></i>
+            <i
+              class="bi"
+              [class.is-spinning]="isPublishing"
+              [ngClass]="isPublishing ? 'bi-arrow-repeat' : 'bi-link-45deg'"
+              aria-hidden="true"></i>
             {{ shareLabel }}
           </button>
-          <p *ngIf="selectedGifts.length < 3">Ajoutez encore quelques idées avant de partager.</p>
-          <p *ngIf="selectedGifts.length >= 3">Belle base ! Vous pouvez continuer à l’affiner.</p>
+          <p *ngIf="selectedGifts.length">Crée une page publique avec les idées et leurs liens d’achat.</p>
         </footer>
       </aside>
     </div>

@@ -25,6 +25,25 @@ export interface PlannerGiftSuggestion {
   imageUrl?: string;
 }
 
+export interface SharedGiftLink {
+  merchant: string;
+  label: string;
+  url: string;
+  isAffiliate: boolean;
+}
+
+export interface SharedGift extends PlannerGiftSuggestion {
+  shoppingLinks: SharedGiftLink[];
+}
+
+export interface SharedGiftList {
+  publicId: string;
+  occasion: string;
+  audienceLabel: string;
+  gifts: SharedGift[];
+  createdAt: string;
+}
+
 export interface PlannerChatResponse {
   message: string;
   quickReplies: string[];
@@ -39,11 +58,27 @@ interface PlannerChatRequest {
   profileSummary: string;
 }
 
+interface PublishGiftListRequest {
+  occasion: string;
+  audienceLabel: string;
+  gifts: PlannerGiftSuggestion[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class GiftPlannerService {
   constructor(private readonly http: HttpClient) {}
 
   chat(request: PlannerChatRequest): Observable<PlannerChatResponse> {
     return this.http.post<PlannerChatResponse>(`${environment.apiUrl}/ai/chat`, request);
+  }
+
+  publishList(request: PublishGiftListRequest): Observable<{ publicId: string }> {
+    return this.http.post<{ publicId: string }>(`${environment.apiUrl}/shared-lists`, request);
+  }
+
+  getSharedList(publicId: string): Observable<SharedGiftList> {
+    return this.http.get<SharedGiftList>(
+      `${environment.apiUrl}/shared-lists/${encodeURIComponent(publicId)}`
+    );
   }
 }

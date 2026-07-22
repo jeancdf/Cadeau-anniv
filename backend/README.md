@@ -41,6 +41,8 @@ Ce backend Node.js/Express fournit les API pour l'application Liste de Cadeaux, 
    - `QWEN_API_KEY`: clé OpenRouter, jamais exposée au frontend
    - `QWEN_MODEL`: modèle Qwen à utiliser (`qwen/qwen3.7-plus` par défaut)
    - `QWEN_BASE_URL`: endpoint compatible OpenAI d'OpenRouter
+   - `AMAZON_AFFILIATE_TAG`: identifiant Amazon Partenaires facultatif
+   - `FNAC_AFFILIATE_URL_TEMPLATE` et `CDISCOUNT_AFFILIATE_URL_TEMPLATE`: redirections partenaires facultatives contenant `{url}`
 
 6. Déployez le service en cliquant sur "Create Web Service"
 
@@ -95,3 +97,5 @@ Pour simplifier le déploiement, vous pouvez utiliser le fichier `render.yaml` p
 - `DELETE /api/gifts/:id` - Supprimer un cadeau
 - `GET /api/export` - Exporter tous les cadeaux au format JSON
 - `POST /api/ai/generate` - Générer des suggestions via le proxy Qwen
+- `POST /api/shared-lists` - Publier un instantané public d’une sélection
+- `GET /api/shared-lists/:publicId` - Consulter une liste publique et ses liens marchands

@@ -17,7 +17,7 @@
     <p class="shared-eyebrow">Connexion interrompue</p>
     <h1>La liste reste emballée pour le moment.</h1>
     <p>{{ loadError }}</p>
-    <button type="button" class="button button--ink" (click)="ngOnInit()">Réessayer</button>
+    <button type="button" class="button button--ink" (click)="loadList()">Réessayer</button>
   </section>
 
   <ng-container *ngIf="!isLoading && sharedList as list">
@@ -25,7 +25,7 @@
       <div>
         <p class="shared-eyebrow">
           <span *ngIf="list.occasion">{{ list.occasion }}</span>
-          <span>{{ list.gifts.length }} idée{{ list.gifts.length > 1 ? 's' : '' }} cadeau</span>
+          <span>{{ list.gifts.length }} idée{{ list.gifts.length > 1 ? 's cadeaux' : ' cadeau' }}</span>
         </p>
         <h1>{{ list.title }}</h1>
         <p class="shared-intro__copy">
@@ -61,18 +61,41 @@
             <i class="bi bi-stars" aria-hidden="true"></i>
             <span>{{ gift.reason }}</span>
           </p>
-          <a
-            *ngIf="gift.productUrl"
-            class="public-gift__link"
-            [href]="gift.productUrl"
-            target="_blank"
-            rel="noopener noreferrer">
-            Voir le cadeau <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
-          </a>
-          <span class="public-gift__unlinked" *ngIf="!gift.productUrl">Idée à chercher librement</span>
+          <div class="public-gift__actions">
+            <a
+              *ngIf="gift.productUrl"
+              class="public-gift__link"
+              [href]="gift.productUrl"
+              target="_blank"
+              rel="noopener noreferrer">
+              Voir le cadeau <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+            </a>
+            <div class="public-gift__shopping" *ngIf="gift.shoppingLinks?.length">
+              <span>Comparer ailleurs</span>
+              <div>
+                <a
+                  *ngFor="let link of gift.shoppingLinks; let linkIndex = index; trackBy: trackShoppingLink"
+                  [href]="link.url"
+                  target="_blank"
+                  [attr.rel]="link.isAffiliate ? 'sponsored noopener noreferrer' : 'noopener noreferrer'">
+                  {{ link.merchant }}
+                  <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                </a>
+              </div>
+            </div>
+            <span class="public-gift__unlinked" *ngIf="!gift.productUrl && !gift.shoppingLinks?.length">Idée à chercher librement</span>
+          </div>
         </div>
       </article>
     </section>
+
+    <aside class="affiliate-note">
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
+      <p>
+        Certains liens de recherche peuvent être affiliés. Gift Finder peut alors recevoir une commission,
+        sans coût supplémentaire pour vous.
+      </p>
+    </aside>
 
     <aside class="shared-cta">
       <div>

@@ -11,12 +11,21 @@ export interface SharedGift {
   budgetLabel: string;
   productUrl?: string;
   imageUrl?: string;
+  shoppingLinks?: SharedShoppingLink[];
+}
+
+export interface SharedShoppingLink {
+  merchant: string;
+  label: string;
+  url: string;
+  isAffiliate: boolean;
 }
 
 export interface SharedList {
   slug: string;
   title: string;
   occasion: string;
+  audienceLabel?: string;
   gifts: SharedGift[];
   createdAt?: string;
   updatedAt?: string;
@@ -25,6 +34,7 @@ export interface SharedList {
 export interface SharedListPayload {
   title: string;
   occasion: string;
+  audienceLabel?: string;
   gifts: SharedGift[];
 }
 

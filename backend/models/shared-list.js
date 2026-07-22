@@ -16,6 +16,11 @@ const SharedList = sequelize.define('SharedList', {
     allowNull: false,
     defaultValue: ''
   },
+  audienceLabel: {
+    type: DataTypes.STRING(80),
+    allowNull: false,
+    defaultValue: ''
+  },
   gifts: {
     type: DataTypes.JSONB,
     allowNull: false,
@@ -26,8 +31,7 @@ const SharedList = sequelize.define('SharedList', {
     allowNull: false
   }
 }, {
-  timestamps: true,
-  indexes: [{ unique: true, fields: ['slug'] }]
+  timestamps: true
 });
 
 const syncSharedListModel = async () => {

@@ -28,6 +28,9 @@ jobs:
       QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
       QWEN_MODEL: ${{ vars.QWEN_MODEL || 'qwen/qwen3.7-plus' }}
       QWEN_BASE_URL: ${{ vars.QWEN_BASE_URL || 'https://openrouter.ai/api/v1' }}
+      AMAZON_AFFILIATE_TAG: ${{ secrets.AMAZON_AFFILIATE_TAG }}
+      FNAC_AFFILIATE_URL_TEMPLATE: ${{ secrets.FNAC_AFFILIATE_URL_TEMPLATE }}
+      CDISCOUNT_AFFILIATE_URL_TEMPLATE: ${{ secrets.CDISCOUNT_AFFILIATE_URL_TEMPLATE }}
 
     steps:
       - name: Checkout
@@ -53,6 +56,9 @@ jobs:
             printf 'QWEN_API_KEY=%s\n' "$QWEN_API_KEY"
             printf 'QWEN_MODEL=%s\n' "$QWEN_MODEL"
             printf 'QWEN_BASE_URL=%s\n' "$QWEN_BASE_URL"
+            printf 'AMAZON_AFFILIATE_TAG=%s\n' "$AMAZON_AFFILIATE_TAG"
+            printf 'FNAC_AFFILIATE_URL_TEMPLATE=%s\n' "$FNAC_AFFILIATE_URL_TEMPLATE"
+            printf 'CDISCOUNT_AFFILIATE_URL_TEMPLATE=%s\n' "$CDISCOUNT_AFFILIATE_URL_TEMPLATE"
           } > "$ENV_FILE"
           chmod 600 "$ENV_FILE"
 

@@ -1,18 +1,18 @@
-import { Component } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
-import { GiftPlannerComponent } from './gift-planner/gift-planner.component';
+import { Component, ViewChild } from '@angular/core';
+import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { GiftPlannerComponent, PLANNER_STORAGE_KEY } from './gift-planner/gift-planner.component';
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { VersionDisplayComponent } from './components/version-display/version-display.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, ThemeToggleComponent, VersionDisplayComponent],
+  imports: [RouterLink, RouterOutlet, ThemeToggleComponent, VersionDisplayComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
 export class AppComponent {
-  private activeRouteComponent: unknown;
+  @ViewChild(RouterOutlet) private outlet?: RouterOutlet;
 
   constructor(private readonly router: Router) {}
 
@@ -20,15 +20,13 @@ export class AppComponent {
     return this.router.url.startsWith('/liste/');
   }
 
-  onRouteActivate(component: unknown): void {
-    this.activeRouteComponent = component;
-  }
-
   startNewList(): void {
-    if (this.activeRouteComponent instanceof GiftPlannerComponent) {
-      this.activeRouteComponent.restart();
+    if (this.outlet?.isActivated && this.outlet.component instanceof GiftPlannerComponent) {
+      this.outlet.component.restart();
       return;
     }
+
+    localStorage.removeItem(PLANNER_STORAGE_KEY);
     void this.router.navigateByUrl('/');
   }
 }

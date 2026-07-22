@@ -200,10 +200,14 @@
   color: var(--accent);
 }
 
-.public-gift__link,
-.public-gift__unlinked {
+.public-gift__actions {
+  width: 100%;
   margin-top: auto;
   padding-top: 1.4rem;
+}
+
+.public-gift__link,
+.public-gift__unlinked {
   font-size: 0.78rem;
   font-weight: 800;
 }
@@ -222,6 +226,59 @@
 
 .public-gift__unlinked {
   color: var(--muted);
+}
+
+.public-gift__shopping {
+  margin-top: 1rem;
+}
+
+.public-gift__shopping > span {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.public-gift__shopping > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.public-gift__shopping a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.38rem 0.55rem;
+  color: var(--ink-soft);
+  font-size: 0.65rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.public-gift__shopping a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.affiliate-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  max-width: 720px;
+  margin: 1.5rem auto 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.affiliate-note p {
+  margin: 0;
 }
 
 .shared-cta {
@@ -317,8 +374,7 @@
     min-height: 0;
   }
 
-  .public-gift__link,
-  .public-gift__unlinked {
+  .public-gift__actions {
     margin-top: 1.2rem;
   }
 
