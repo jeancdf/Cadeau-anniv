@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
@@ -59,7 +60,10 @@ export class LoginComponent {
   loginError = false;
   isLoggedIn = false;
 
-  constructor(private authService: AuthService) {
+  constructor(
+    private authService: AuthService,
+    private router: Router
+  ) {
     this.authService.isAuthenticated$.subscribe(
       isAuth => this.isLoggedIn = isAuth
     );
@@ -80,5 +84,6 @@ export class LoginComponent {
 
   onLogout(): void {
     this.authService.logout();
+    void this.router.navigateByUrl('/', { replaceUrl: true });
   }
 } 

@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import express from 'express';
 import { UniqueConstraintError } from 'sequelize';
 import { SharedList } from '../models/shared-list.js';
+import { GiftClick } from '../models/gift-click.js';
 import {
   createEditToken,
   editTokensMatch,
@@ -11,6 +12,7 @@ import {
   normalizeSlug,
   toPublicSharedList
 } from '../services/shared-list-utils.js';
+import { getSharedGiftId } from '../services/stats-utils.js';
 import { fetchProductPreview } from '../services/product-preview.js';
 import { requireUser } from '../services/user-auth.js';
 
@@ -66,13 +68,14 @@ export const buildShoppingLinks = (giftName) => {
 
   return [
     {
+      trackingKey: 'amazon',
       merchant: 'Amazon.fr',
       label: 'Rechercher sur Amazon',
       url: amazonUrl.toString(),
       isAffiliate: amazonUrl.searchParams.has('tag')
     },
-    { merchant: 'Fnac', label: 'Rechercher sur Fnac', ...fnacLink },
-    { merchant: 'Cdiscount', label: 'Rechercher sur Cdiscount', ...cdiscountLink }
+    { trackingKey: 'fnac', merchant: 'Fnac', label: 'Rechercher sur Fnac', ...fnacLink },
+    { trackingKey: 'cdiscount', merchant: 'Cdiscount', label: 'Rechercher sur Cdiscount', ...cdiscountLink }
   ];
 };
 
@@ -101,8 +104,9 @@ const enrichPublicList = (sharedList) => {
   return {
     ...publicList,
     publicId: publicList.slug,
-    gifts: publicList.gifts.map(gift => ({
+    gifts: publicList.gifts.map((gift, index) => ({
       ...gift,
+      id: getSharedGiftId(publicList.slug, gift, index),
       shoppingLinks: buildShoppingLinks(gift.name)
     }))
   };
@@ -179,6 +183,57 @@ router.get('/shared-lists/:slug', async (req, res) => {
     return res.status(500).json({ message: 'Impossible de charger cette liste' });
   }
 });
+
+router.post(
+  '/shared-lists/:slug/gifts/:giftId/clicks',
+  createRateLimit({ keyPrefix: 'gift-click', windowMs: 60 * 1000, maximum: 120 }),
+  async (req, res) => {
+    try {
+      const slug = normalizeSlug(req.params.slug);
+      const sharedList = slug ? await SharedList.findOne({ where: { slug } }) : null;
+      if (!sharedList) {
+        return res.status(404).json({ message: 'Cette liste n’existe pas ou plus' });
+      }
+
+      const publicList = enrichPublicList(sharedList);
+      const gift = publicList.gifts.find(candidate => candidate.id === req.params.giftId);
+      if (!gift) {
+        return res.status(404).json({ message: 'Ce cadeau n’existe pas ou plus' });
+      }
+
+      const linkKey = trimText(req.body?.linkKey, 40).toLowerCase();
+      let merchant = '';
+      let isAffiliate = false;
+      if (linkKey === 'product' && gift.productUrl) {
+        try {
+          merchant = new URL(gift.productUrl).hostname.replace(/^www\./, '');
+        } catch {
+          merchant = 'Lien produit';
+        }
+      } else {
+        const shoppingLink = gift.shoppingLinks.find(link => link.trackingKey === linkKey);
+        if (!shoppingLink) {
+          return res.status(400).json({ message: 'Ce lien marchand n’est pas disponible' });
+        }
+        merchant = shoppingLink.merchant;
+        isAffiliate = shoppingLink.isAffiliate;
+      }
+
+      await GiftClick.create({
+        sharedListId: sharedList.id,
+        giftId: gift.id,
+        giftName: gift.name,
+        linkKey,
+        merchant: trimText(merchant, 120),
+        isAffiliate
+      });
+      return res.status(204).end();
+    } catch (error) {
+      console.error('Erreur lors du suivi du clic cadeau:', error);
+      return res.status(500).json({ message: 'Impossible d’enregistrer ce clic' });
+    }
+  }
+);
 
 router.put('/shared-lists/:slug', async (req, res) => {
   try {

@@ -5,6 +5,7 @@ import { catchError, forkJoin, map, Observable, of, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface SharedGift {
+  id?: string;
   name: string;
   description: string;
   reason: string;
@@ -15,6 +16,7 @@ export interface SharedGift {
 }
 
 export interface SharedShoppingLink {
+  trackingKey: string;
   merchant: string;
   label: string;
   url: string;
@@ -55,6 +57,13 @@ export class SharedListService {
 
   getSharedList(slug: string): Observable<SharedList> {
     return this.http.get<SharedList>(`${environment.apiUrl}/shared-lists/${encodeURIComponent(slug)}`);
+  }
+
+  trackGiftClick(slug: string, giftId: string, linkKey: string): Observable<void> {
+    return this.http.post<void>(
+      `${environment.apiUrl}/shared-lists/${encodeURIComponent(slug)}/gifts/${encodeURIComponent(giftId)}/clicks`,
+      { linkKey }
+    );
   }
 
   createSharedList(payload: SharedListPayload & { slug: string }): Observable<{ list: SharedList; editToken: string }> {

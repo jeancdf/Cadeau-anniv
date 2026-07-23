@@ -99,5 +99,7 @@ Pour simplifier le déploiement, vous pouvez utiliser le fichier `render.yaml` p
 - `POST /api/ai/generate` - Générer des suggestions via le proxy Qwen
 - `POST /api/shared-lists` - Publier une sélection sous un slug personnalisé
 - `GET /api/shared-lists/:slug` - Consulter une liste publique et ses liens marchands
+- `POST /api/shared-lists/:slug/gifts/:giftId/clicks` - Enregistrer anonymement un clic marchand affiché
 - `PUT /api/shared-lists/:slug` - Republier avec le secret d’édition de la liste
+- `GET /api/stats/overview` - Charger le tableau de bord statistique (jeton administrateur requis)
 - `POST /api/product-preview` - Récupérer l’image Open Graph d’un lien produit

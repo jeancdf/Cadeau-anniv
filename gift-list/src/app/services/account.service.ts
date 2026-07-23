@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, catchError, finalize, map, Observable, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { SharedListService } from './shared-list.service';
+import { Router } from '@angular/router';
 
 export interface AccountUser {
   id: string;
@@ -35,7 +36,8 @@ export class AccountService {
 
   constructor(
     private readonly http: HttpClient,
-    private readonly sharedListService: SharedListService
+    private readonly sharedListService: SharedListService,
+    private readonly router: Router
   ) {
     this.refreshSession().subscribe();
   }
@@ -57,7 +59,10 @@ export class AccountService {
       withCredentials: true
     }).pipe(
       catchError(() => of(void 0)),
-      finalize(() => this.userSubject.next(null))
+      finalize(() => {
+        this.userSubject.next(null);
+        void this.router.navigateByUrl('/', { replaceUrl: true });
+      })
     );
   }
 

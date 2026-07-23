@@ -17,6 +17,11 @@ export const routes: Routes = [
     title: 'Mes listes — Gift Finder'
   },
   {
+    path: 'statistiques',
+    loadComponent: () => import('./stats/stats.component').then(module => module.StatsComponent),
+    title: 'Statistiques — Gift Finder'
+  },
+  {
     path: 'liste/:slug',
     loadComponent: () => import('./shared-list/shared-list.component').then(module => module.SharedListComponent),
     title: 'Liste de cadeaux — Gift Finder'

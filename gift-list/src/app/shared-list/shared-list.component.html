@@ -72,7 +72,8 @@
               class="public-gift__link"
               [href]="gift.productUrl"
               target="_blank"
-              rel="noopener noreferrer">
+              rel="noopener noreferrer"
+              (click)="trackGiftClick(gift, 'product')">
               Voir le cadeau <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
             </a>
             <div class="public-gift__shopping" *ngIf="gift.shoppingLinks?.length">
@@ -82,6 +83,7 @@
                   *ngFor="let link of gift.shoppingLinks; let linkIndex = index; trackBy: trackShoppingLink"
                   [href]="link.url"
                   target="_blank"
+                  (click)="trackGiftClick(gift, link.trackingKey)"
                   [attr.rel]="link.isAffiliate ? 'sponsored noopener noreferrer' : 'noopener noreferrer'">
                   {{ link.merchant }}
                   <i class="bi bi-arrow-up-right" aria-hidden="true"></i>

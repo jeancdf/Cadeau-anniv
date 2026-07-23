@@ -1,0 +1,171 @@
+<main class="stats-page">
+  <header class="stats-header">
+    <a class="stats-brand" routerLink="/" aria-label="Gift Finder, accueil">
+      <span><i class="bi bi-gift" aria-hidden="true"></i></span>
+      <div>
+        <strong>Gift Finder</strong>
+        <small>Pilotage</small>
+      </div>
+    </a>
+    <div class="stats-header__actions">
+      <app-theme-toggle></app-theme-toggle>
+      <button type="button" *ngIf="isAuthenticated" (click)="logout()">
+        <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+        Déconnexion
+      </button>
+    </div>
+  </header>
+
+  <section class="stats-login" *ngIf="!isAuthenticated">
+    <span class="stats-login__icon"><i class="bi bi-bar-chart-line" aria-hidden="true"></i></span>
+    <p>Statistiques privées</p>
+    <h1>Ouvrir le tableau de bord</h1>
+    <span>Ces données sont réservées à l’administration de Gift Finder.</span>
+    <form (ngSubmit)="login()" novalidate>
+      <label for="stats-password">Mot de passe administrateur</label>
+      <input
+        id="stats-password"
+        type="password"
+        name="password"
+        autocomplete="current-password"
+        [(ngModel)]="password"
+        placeholder="Votre mot de passe">
+      <p class="stats-error" *ngIf="loginError" role="alert">{{ loginError }}</p>
+      <button type="submit" [disabled]="isLoggingIn">
+        {{ isLoggingIn ? 'Vérification…' : 'Voir les statistiques' }}
+        <i class="bi bi-arrow-right" *ngIf="!isLoggingIn" aria-hidden="true"></i>
+      </button>
+    </form>
+  </section>
+
+  <ng-container *ngIf="isAuthenticated">
+    <section class="stats-title">
+      <div>
+        <p>Vue d’ensemble</p>
+        <h1>Ce que produit Gift Finder.</h1>
+        <span *ngIf="stats">Actualisé le {{ stats.generatedAt | date:'dd/MM/yyyy à HH:mm' }}</span>
+      </div>
+      <button type="button" (click)="loadStats()" [disabled]="isLoading">
+        <i class="bi" [ngClass]="isLoading ? 'bi-arrow-repeat is-spinning' : 'bi-arrow-clockwise'" aria-hidden="true"></i>
+        {{ isLoading ? 'Actualisation…' : 'Actualiser' }}
+      </button>
+    </section>
+
+    <div class="stats-state" *ngIf="isLoading && !stats" aria-live="polite">
+      <span class="large-spinner" aria-hidden="true"></span>
+      Chargement des statistiques…
+    </div>
+
+    <div class="stats-state stats-state--error" *ngIf="loadError" role="alert">
+      <span>{{ loadError }}</span>
+      <button type="button" (click)="loadStats()">Réessayer</button>
+    </div>
+
+    <ng-container *ngIf="stats as dashboard">
+      <section class="stats-cards" aria-label="Indicateurs principaux">
+        <article>
+          <span><i class="bi bi-journals" aria-hidden="true"></i></span>
+          <div><strong>{{ dashboard.summary.lists | number }}</strong><small>Listes créées</small></div>
+        </article>
+        <article>
+          <span><i class="bi bi-gift" aria-hidden="true"></i></span>
+          <div><strong>{{ dashboard.summary.gifts | number }}</strong><small>Cadeaux ajoutés</small></div>
+        </article>
+        <article>
+          <span><i class="bi bi-cursor" aria-hidden="true"></i></span>
+          <div><strong>{{ dashboard.summary.clicks | number }}</strong><small>Clics cadeaux</small></div>
+        </article>
+        <article>
+          <span><i class="bi bi-cash-stack" aria-hidden="true"></i></span>
+          <div><strong>{{ dashboard.budget.averageEstimatedPrice | number:'1.0-2' }} €</strong><small>Prix IA moyen estimé</small></div>
+        </article>
+      </section>
+
+      <section class="stats-grid">
+        <article class="stats-panel stats-panel--budget">
+          <header>
+            <div>
+              <p>Budgets de l’IA</p>
+              <h2>Valeur estimée des idées</h2>
+            </div>
+            <span>{{ dashboard.budget.coveragePercent }} % renseignés</span>
+          </header>
+          <div class="budget-range">
+            <small>Fourchette totale actuelle</small>
+            <strong>
+              {{ dashboard.budget.estimatedMinimumTotal | number:'1.0-2' }} €
+              <span>à</span>
+              {{ dashboard.budget.estimatedMaximumTotal | number:'1.0-2' }} €
+            </strong>
+            <p>
+              {{ dashboard.budget.giftsWithEstimate }} cadeau{{ dashboard.budget.giftsWithEstimate > 1 ? 'x' : '' }}
+              sur {{ dashboard.summary.gifts }} avec une estimation exploitable.
+            </p>
+          </div>
+        </article>
+
+        <article class="stats-panel">
+          <header>
+            <div>
+              <p>Marchands</p>
+              <h2>Origine des clics</h2>
+            </div>
+            <span>{{ dashboard.summary.affiliateClicks }} affiliés</span>
+          </header>
+          <div class="merchant-list" *ngIf="dashboard.merchants.length; else noMerchantClicks">
+            <div *ngFor="let merchant of dashboard.merchants">
+              <strong>{{ merchant.merchant }}</strong>
+              <span>{{ merchant.clicks }} clic{{ merchant.clicks > 1 ? 's' : '' }}</span>
+            </div>
+          </div>
+          <ng-template #noMerchantClicks>
+            <p class="empty-copy">Les premiers clics marchands apparaîtront ici.</p>
+          </ng-template>
+        </article>
+      </section>
+
+      <section class="gift-stats">
+        <header>
+          <div>
+            <p>Détail par cadeau</p>
+            <h2>{{ filteredGifts.length }} cadeau{{ filteredGifts.length > 1 ? 'x' : '' }} affiché{{ filteredGifts.length > 1 ? 's' : '' }}</h2>
+          </div>
+          <label>
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input
+              type="search"
+              [(ngModel)]="searchQuery"
+              placeholder="Chercher un cadeau, une liste…"
+              aria-label="Filtrer les statistiques par cadeau ou liste">
+          </label>
+        </header>
+
+        <div class="gift-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Cadeau</th>
+                <th>Liste</th>
+                <th>Estimation IA</th>
+                <th>Marchands</th>
+                <th class="is-number">Clics</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let gift of filteredGifts">
+                <td><strong>{{ gift.giftName }}</strong></td>
+                <td><a [routerLink]="['/liste', gift.listSlug]" target="_blank">{{ gift.listTitle }}</a></td>
+                <td>{{ gift.budgetLabel || 'Non estimé' }}</td>
+                <td>{{ merchantSummary(gift) }}</td>
+                <td class="is-number"><strong>{{ gift.clicks }}</strong></td>
+              </tr>
+              <tr *ngIf="!filteredGifts.length">
+                <td colspan="5" class="empty-row">Aucun cadeau ne correspond à cette recherche.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+  </ng-container>
+</main>

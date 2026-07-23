@@ -493,6 +493,7 @@ export class GiftPlannerComponent implements OnInit, AfterViewChecked {
       occasion: this.occasionLabel,
       audienceLabel: this.audienceLabel,
       gifts: this.selectedGifts.map(gift => ({
+        id: gift.id,
         name: gift.name,
         description: gift.description || '',
         reason: gift.reason || '',
@@ -513,6 +514,15 @@ export class GiftPlannerComponent implements OnInit, AfterViewChecked {
       next: response => {
         this.currentSharedSlug = response.list.slug;
         this.currentSharedTitle = response.list.title;
+        this.selectedGifts = response.list.gifts.map(gift => ({
+          id: gift.id,
+          name: gift.name,
+          description: gift.description || '',
+          reason: gift.reason || '',
+          budgetLabel: gift.budgetLabel || '',
+          productUrl: gift.productUrl || '',
+          imageUrl: gift.imageUrl || ''
+        }));
         this.shareSlug = response.list.slug;
         this.shareTitle = response.list.title;
         this.publishedUrl = this.sharedListService.getPublicUrl(response.list.slug);
@@ -611,6 +621,7 @@ export class GiftPlannerComponent implements OnInit, AfterViewChecked {
             startMode: 'ideas'
           };
           this.selectedGifts = list.gifts.map(gift => ({
+            id: gift.id,
             name: gift.name,
             description: gift.description || '',
             reason: gift.reason || '',

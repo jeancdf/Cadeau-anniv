@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { createGiftId, normalizeGiftId } from './stats-utils.js';
 
 const RESERVED_SLUGS = new Set([
   'api',
@@ -67,6 +68,7 @@ export const normalizeSharedGifts = (gifts) => {
     }
 
     return {
+      id: normalizeGiftId(gift?.id) || createGiftId(),
       name,
       description: cleanText(gift?.description, 300),
       reason: cleanText(gift?.reason, 240),

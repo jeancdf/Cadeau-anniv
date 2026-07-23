@@ -63,11 +63,20 @@ export class SharedListComponent implements OnInit {
     this.failedImages.add(index);
   }
 
+  trackGiftClick(gift: SharedList['gifts'][number], linkKey: string): void {
+    if (!this.sharedList?.slug || !gift.id) {
+      return;
+    }
+    this.sharedListService.trackGiftClick(this.sharedList.slug, gift.id, linkKey)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: () => undefined });
+  }
+
   startNewList(): void {
     localStorage.removeItem(PLANNER_STORAGE_KEY);
   }
 
   trackShoppingLink(index: number, link: SharedShoppingLink): string {
-    return `${link.merchant}-${index}`;
+    return `${link.trackingKey}-${index}`;
   }
 }

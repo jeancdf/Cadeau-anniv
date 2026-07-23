@@ -17,6 +17,7 @@ export interface PlannerConversationMessage {
 }
 
 export interface PlannerGiftSuggestion {
+  id?: string;
   name: string;
   description: string;
   reason: string;
@@ -26,6 +27,7 @@ export interface PlannerGiftSuggestion {
 }
 
 export interface SharedGiftLink {
+  trackingKey: string;
   merchant: string;
   label: string;
   url: string;

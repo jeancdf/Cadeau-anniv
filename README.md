@@ -19,12 +19,14 @@ Ce projet est organisé en monorepo avec deux dossiers principaux:
 - Export de la liste au format JSON
 - Recherche, filtres par budget et partage de la liste
 - Publication d’une page publique par liste avec liens marchands et suivi affilié optionnel
+- Tableau de bord privé `/statistiques` : listes, cadeaux, budgets IA et clics par cadeau
 - Thèmes clair et sombre, interface responsive
 
 ### Backend
 - API REST complète pour la gestion des cadeaux
 - Réorganisation atomique des priorités
 - Authentification administrateur par jeton signé et temporaire
+- Statistiques agrégées et suivi anonyme des clics marchands
 - Base de données PostgreSQL
 
 ## Installation

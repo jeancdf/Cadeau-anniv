@@ -6,11 +6,13 @@ import giftRoutes from './routes/gifts.js';
 import aiRoutes from './routes/ai.js';
 import sharedListRoutes from './routes/shared-lists.js';
 import accountRoutes from './routes/account.js';
+import statsRoutes from './routes/stats.js';
 import { sequelize, testConnection } from './config/database.js';
 import { syncGiftModel } from './models/gift.js';
 import { syncSharedListModel } from './models/shared-list.js';
 import { syncUserModel } from './models/user.js';
 import { syncUserSessionModel } from './models/user-session.js';
+import { syncGiftClickModel } from './models/gift-click.js';
 import { loadOptionalUser } from './services/user-auth.js';
 
 // Charger les variables d'environnement
@@ -125,6 +127,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api', aiRoutes);
 app.use('/api', giftRoutes);
+app.use('/api', statsRoutes);
 
 // Route de base
 app.get('/', (req, res) => {
@@ -141,6 +144,7 @@ const initializeServer = async () => {
     await syncUserModel();
     await syncUserSessionModel();
     await Promise.all([syncGiftModel(), syncSharedListModel()]);
+    await syncGiftClickModel();
     
     // Démarrer le serveur
     app.listen(PORT, () => {
