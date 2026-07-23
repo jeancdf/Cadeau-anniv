@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildStatsSnapshot, getSharedGiftId, parseBudgetEstimate } from '../services/stats-utils.js';
+import { normalizeSharedGifts } from '../services/shared-list-utils.js';
 
 test('parseBudgetEstimate reads an AI range or a single estimated price', () => {
   assert.deepEqual(parseBudgetEstimate('Environ 30 à 60 euros'), { minimum: 30, maximum: 60 });
@@ -14,6 +15,17 @@ test('getSharedGiftId keeps stored identifiers and deterministically identifies 
     getSharedGiftId('liste-test', { name: 'Livre' }, 0),
     getSharedGiftId('liste-test', { name: 'Livre' }, 0)
   );
+});
+
+test('normalizeSharedGifts keeps valid identifiers unique inside a list', () => {
+  const gifts = normalizeSharedGifts([
+    { id: 'gift_duplicate', name: 'Premier cadeau' },
+    { id: 'gift_duplicate', name: 'Deuxième cadeau' }
+  ]);
+
+  assert.equal(gifts[0].id, 'gift_duplicate');
+  assert.notEqual(gifts[1].id, 'gift_duplicate');
+  assert.notEqual(gifts[0].id, gifts[1].id);
 });
 
 test('buildStatsSnapshot aggregates lists, AI budgets and clicks per individual gift', () => {

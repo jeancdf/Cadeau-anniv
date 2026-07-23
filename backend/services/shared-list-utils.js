@@ -61,14 +61,19 @@ export const normalizeSharedGifts = (gifts) => {
     throw new Error('Une liste ne peut pas contenir plus de 20 cadeaux');
   }
 
+  const usedGiftIds = new Set();
   return gifts.map((gift, index) => {
     const name = cleanText(gift?.name, 120);
     if (!name) {
       throw new Error(`Le cadeau ${index + 1} doit avoir un nom`);
     }
 
+    const requestedId = normalizeGiftId(gift?.id);
+    const id = requestedId && !usedGiftIds.has(requestedId) ? requestedId : createGiftId();
+    usedGiftIds.add(id);
+
     return {
-      id: normalizeGiftId(gift?.id) || createGiftId(),
+      id,
       name,
       description: cleanText(gift?.description, 300),
       reason: cleanText(gift?.reason, 240),
