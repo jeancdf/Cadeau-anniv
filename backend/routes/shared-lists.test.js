@@ -17,12 +17,34 @@ const resetAffiliateEnv = () => {
   }
 };
 
-test('buildShoppingLinks exposes every joined programme, unaffiliated by default', () => {
+test('buildShoppingLinks only proposes merchants matching the gift', () => {
   resetAffiliateEnv();
 
-  const links = buildShoppingLinks('Casque audio');
+  const generic = buildShoppingLinks('Sacoche en cuir').map(link => link.trackingKey);
+  assert.deepEqual(generic, ['cdiscount', 'aliexpress']);
 
-  assert.deepEqual(links.map(link => link.trackingKey), MERCHANT_KEYS);
+  assert.deepEqual(
+    buildShoppingLinks('Coffret de thé vert').map(link => link.trackingKey),
+    ['cdiscount', 'aliexpress', 'iteaworld']
+  );
+  assert.deepEqual(
+    buildShoppingLinks('Set LEGO Star Wars').map(link => link.trackingKey),
+    ['cdiscount', 'aliexpress', 'brickzonehub']
+  );
+  assert.deepEqual(
+    buildShoppingLinks('Caméra de surveillance').map(link => link.trackingKey),
+    ['cdiscount', 'aliexpress', 'imou']
+  );
+  assert.deepEqual(
+    buildShoppingLinks('Ballon de football').map(link => link.trackingKey),
+    ['cdiscount', 'aliexpress', 'sportpartners']
+  );
+});
+
+test('buildShoppingLinks returns safe unaffiliated links by default', () => {
+  resetAffiliateEnv();
+
+  const links = buildShoppingLinks('Sacoche en cuir');
   assert.ok(links.every(link => link.isAffiliate === false));
   assert.ok(links.every(link => /^https:\/\//.test(link.url)));
   assert.ok(links.every(link => !link.url.includes('{query}')));
@@ -57,7 +79,7 @@ test('buildShoppingLinks keeps merchant keys and env variable names aligned', ()
   process.env.AWIN_ADVERTISER_ALIEXPRESS = '26009';
   process.env.AWIN_ADVERTISER_SPORTPARTNERS = '127959';
 
-  const affiliated = buildShoppingLinks('Ballon de foot')
+  const affiliated = buildShoppingLinks('Ballon de football')
     .filter(link => link.isAffiliate)
     .map(link => [link.trackingKey, new URL(link.url).searchParams.get('awinmid')]);
 
@@ -73,7 +95,7 @@ test('buildShoppingLinks ignores invalid Awin configuration', () => {
   process.env.AWIN_PUBLISHER_ID = '2997877';
   process.env.AWIN_ADVERTISER_CDISCOUNT = 'javascript:alert(1)';
   const links = buildShoppingLinks('Casque audio');
-  assert.equal(links.length, MERCHANT_KEYS.length);
+  assert.equal(links.length, 2);
   assert.ok(links.every(link => !link.isAffiliate));
   assert.match(links[0].url, /^https:\/\/www\.cdiscount\.com\//);
 });
@@ -93,6 +115,6 @@ test('normalizeGifts rejects empty entries and never accepts unsafe client links
 
   assert.equal(gifts.length, 1);
   assert.equal(gifts[0].name, 'Atelier céramique');
-  assert.equal(gifts[0].shoppingLinks.length, MERCHANT_KEYS.length);
+  assert.equal(gifts[0].shoppingLinks.length, 2);
   assert.ok(gifts[0].shoppingLinks.every(link => /^https:\/\//.test(link.url)));
 });

@@ -27,38 +27,66 @@ const AWIN_DEEP_LINK_ENDPOINT = 'https://www.awin1.com/cread.php';
 // L'identifiant de programme (awinmid) n'est volontairement pas ici, il est lu
 // dans le secret AWIN_ADVERTISER_<CLÉ>. Les URL de recherche ont été relevées
 // sur chaque site : les revérifier si un marchand refond sa boutique.
+//
+// `universal` : généraliste, proposé pour tout cadeau.
+// `keywords`  : boutique spécialisée, proposée uniquement si le nom du cadeau
+//               correspond. Sans cela, une boutique de thé se retrouve suggérée
+//               pour une sacoche.
 const MERCHANT_CATALOGUE = [
   {
     key: 'cdiscount',
     merchant: 'Cdiscount',
-    searchUrl: 'https://www.cdiscount.com/search/10/{query}.html'
+    searchUrl: 'https://www.cdiscount.com/search/10/{query}.html',
+    universal: true
   },
   {
     key: 'aliexpress',
     merchant: 'AliExpress',
-    searchUrl: 'https://fr.aliexpress.com/wholesale?SearchText={query}'
+    searchUrl: 'https://fr.aliexpress.com/wholesale?SearchText={query}',
+    universal: true
   },
   {
     key: 'iteaworld',
     merchant: 'iTeaworld',
-    searchUrl: 'https://iteaworld.com/search?q={query}'
+    searchUrl: 'https://iteaworld.com/search?q={query}',
+    keywords: ['thé', 'tisane', 'infuseur', 'théière', 'matcha', 'mug', 'tasse', 'tea']
   },
   {
     key: 'brickzonehub',
     merchant: 'BrickZoneHub',
-    searchUrl: 'https://brickzonehub.co.uk/search?q={query}'
+    searchUrl: 'https://brickzonehub.co.uk/search?q={query}',
+    keywords: ['lego', 'brique', 'minifig', 'figurine', 'maquette', 'présentoir', 'vitrine']
   },
   {
     key: 'imou',
     merchant: 'Imou',
-    searchUrl: 'https://store.imou.com/search?q={query}'
+    searchUrl: 'https://store.imou.com/search?q={query}',
+    keywords: ['caméra', 'camera', 'surveillance', 'sécurité', 'alarme', 'domotique', 'sonnette']
   },
   {
     key: 'sportpartners',
     merchant: 'SportPartners',
-    searchUrl: 'https://www.sportpartners.fr/catalog?q={query}'
+    searchUrl: 'https://www.sportpartners.fr/catalog?q={query}',
+    keywords: [
+      'sport', 'vélo', 'cyclisme', 'fitness', 'musculation', 'running', 'ballon',
+      'raquette', 'yoga', 'randonnée', 'natation', 'football', 'basket', 'tennis', 'haltère'
+    ]
   }
 ];
+
+const toWords = (value) => String(value || '').toLowerCase().split(/[^a-zà-ÿ0-9]+/).filter(Boolean);
+
+// Un marchand spécialisé n'est proposé que si le cadeau relève de son univers.
+const matchesGift = (merchantConfig, giftName) => {
+  if (merchantConfig.universal) {
+    return true;
+  }
+
+  const words = toWords(giftName);
+  return (merchantConfig.keywords || []).some(
+    (keyword) => words.some((word) => word.startsWith(keyword))
+  );
+};
 
 const isAwinId = (value) => /^[0-9]{1,12}$/.test(value);
 
@@ -103,7 +131,9 @@ export const buildShoppingLinks = (giftName, clickRef = '') => {
   const encodedName = encodeURIComponent(giftName);
   const safeClickRef = normalizeClickRef(clickRef);
 
-  return MERCHANT_CATALOGUE.map((merchantConfig) => {
+  return MERCHANT_CATALOGUE.filter(
+    (merchantConfig) => matchesGift(merchantConfig, giftName)
+  ).map((merchantConfig) => {
     const destination = merchantConfig.searchUrl.replaceAll('{query}', encodedName);
     const advertiserId = readAdvertiserId(merchantConfig.key);
     const awinUrl = advertiserId
