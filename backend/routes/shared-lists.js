@@ -21,62 +21,103 @@ const usageByIp = new Map();
 
 const trimText = (value, maximumLength) => String(value || '').trim().slice(0, maximumLength);
 
-const normalizeAffiliateUrl = (value) => {
-  try {
-    const parsedUrl = new URL(String(value || '').trim());
-    return ['http:', 'https:'].includes(parsedUrl.protocol) ? parsedUrl.toString().slice(0, 2000) : '';
-  } catch {
+const AWIN_DEEP_LINK_ENDPOINT = 'https://www.awin1.com/cread.php';
+
+// Catalogue public des marchands proposés : un par programme Awin rejoint.
+// L'identifiant de programme (awinmid) n'est volontairement pas ici, il est lu
+// dans le secret AWIN_ADVERTISER_<CLÉ>. Les URL de recherche ont été relevées
+// sur chaque site : les revérifier si un marchand refond sa boutique.
+const MERCHANT_CATALOGUE = [
+  {
+    key: 'cdiscount',
+    merchant: 'Cdiscount',
+    searchUrl: 'https://www.cdiscount.com/search/10/{query}.html'
+  },
+  {
+    key: 'aliexpress',
+    merchant: 'AliExpress',
+    searchUrl: 'https://fr.aliexpress.com/wholesale?SearchText={query}'
+  },
+  {
+    key: 'iteaworld',
+    merchant: 'iTeaworld',
+    searchUrl: 'https://iteaworld.com/search?q={query}'
+  },
+  {
+    key: 'brickzonehub',
+    merchant: 'BrickZoneHub',
+    searchUrl: 'https://brickzonehub.co.uk/search?q={query}'
+  },
+  {
+    key: 'imou',
+    merchant: 'Imou',
+    searchUrl: 'https://store.imou.com/search?q={query}'
+  },
+  {
+    key: 'sportpartners',
+    merchant: 'SportPartners',
+    searchUrl: 'https://www.sportpartners.fr/catalog?q={query}'
+  }
+];
+
+const isAwinId = (value) => /^[0-9]{1,12}$/.test(value);
+
+const toEnvSuffix = (key) => key.toUpperCase().replaceAll('-', '_');
+
+const normalizeClickRef = (value) => String(value || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60);
+
+const readAdvertiserId = (key) => {
+  const variableName = `AWIN_ADVERTISER_${toEnvSuffix(key)}`;
+  const advertiserId = trimText(process.env[variableName], 12);
+  if (!advertiserId) {
     return '';
   }
-};
 
-const applyAffiliateTemplate = (destination, query, template) => {
-  const cleanTemplate = trimText(template, 2000);
-  if (!cleanTemplate || !cleanTemplate.includes('{url}')) {
-    return { url: destination, isAffiliate: false };
+  if (!isAwinId(advertiserId)) {
+    console.warn(`${variableName} ignoré : l’awinmid doit être un nombre`);
+    return '';
   }
 
-  const affiliateUrl = cleanTemplate
-    .replaceAll('{url}', encodeURIComponent(destination))
-    .replaceAll('{query}', encodeURIComponent(query));
-  const normalizedUrl = normalizeAffiliateUrl(affiliateUrl);
-  return normalizedUrl
-    ? { url: normalizedUrl, isAffiliate: true }
-    : { url: destination, isAffiliate: false };
+  return advertiserId;
 };
 
-export const buildShoppingLinks = (giftName) => {
+const buildAwinDeepLink = (advertiserId, destination, clickRef) => {
+  const publisherId = trimText(process.env.AWIN_PUBLISHER_ID, 12);
+  if (!isAwinId(publisherId)) {
+    return '';
+  }
+
+  const awinUrl = new URL(AWIN_DEEP_LINK_ENDPOINT);
+  awinUrl.searchParams.set('awinmid', advertiserId);
+  awinUrl.searchParams.set('awinaffid', publisherId);
+  if (clickRef) {
+    awinUrl.searchParams.set('clickref', clickRef);
+  }
+  awinUrl.searchParams.set('ued', destination);
+
+  const deepLink = awinUrl.toString();
+  return deepLink.length <= 2000 ? deepLink : '';
+};
+
+export const buildShoppingLinks = (giftName, clickRef = '') => {
   const encodedName = encodeURIComponent(giftName);
-  const amazonUrl = new URL(`https://www.amazon.fr/s?k=${encodedName}`);
-  const amazonTag = trimText(process.env.AMAZON_AFFILIATE_TAG, 64);
-  if (/^[A-Za-z0-9-]+$/.test(amazonTag)) {
-    amazonUrl.searchParams.set('tag', amazonTag);
-  }
+  const safeClickRef = normalizeClickRef(clickRef);
 
-  const fnacDestination = `https://www.fnac.com/SearchResult/ResultList.aspx?Search=${encodedName}`;
-  const cdiscountDestination = `https://www.cdiscount.com/search/10/${encodedName}.html`;
-  const fnacLink = applyAffiliateTemplate(
-    fnacDestination,
-    giftName,
-    process.env.FNAC_AFFILIATE_URL_TEMPLATE
-  );
-  const cdiscountLink = applyAffiliateTemplate(
-    cdiscountDestination,
-    giftName,
-    process.env.CDISCOUNT_AFFILIATE_URL_TEMPLATE
-  );
+  return MERCHANT_CATALOGUE.map((merchantConfig) => {
+    const destination = merchantConfig.searchUrl.replaceAll('{query}', encodedName);
+    const advertiserId = readAdvertiserId(merchantConfig.key);
+    const awinUrl = advertiserId
+      ? buildAwinDeepLink(advertiserId, destination, safeClickRef)
+      : '';
 
-  return [
-    {
-      trackingKey: 'amazon',
-      merchant: 'Amazon.fr',
-      label: 'Rechercher sur Amazon',
-      url: amazonUrl.toString(),
-      isAffiliate: amazonUrl.searchParams.has('tag')
-    },
-    { trackingKey: 'fnac', merchant: 'Fnac', label: 'Rechercher sur Fnac', ...fnacLink },
-    { trackingKey: 'cdiscount', merchant: 'Cdiscount', label: 'Rechercher sur Cdiscount', ...cdiscountLink }
-  ];
+    return {
+      trackingKey: merchantConfig.key,
+      merchant: merchantConfig.merchant,
+      label: `Rechercher sur ${merchantConfig.merchant}`,
+      url: awinUrl || destination,
+      isAffiliate: Boolean(awinUrl)
+    };
+  });
 };
 
 export const normalizeGifts = (gifts) => {
@@ -104,11 +145,14 @@ const enrichPublicList = (sharedList) => {
   return {
     ...publicList,
     publicId: publicList.slug,
-    gifts: publicList.gifts.map((gift, index) => ({
-      ...gift,
-      id: getSharedGiftId(publicList.slug, gift, index),
-      shoppingLinks: buildShoppingLinks(gift.name)
-    }))
+    gifts: publicList.gifts.map((gift, index) => {
+      const giftId = getSharedGiftId(publicList.slug, gift, index);
+      return {
+        ...gift,
+        id: giftId,
+        shoppingLinks: buildShoppingLinks(gift.name, giftId)
+      };
+    })
   };
 };
 

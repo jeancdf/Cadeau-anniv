@@ -261,11 +261,66 @@ La différence entre la clé des flux et le token API est précisée dans la [do
 
 ## 5. Secrets Awin nécessaires
 
-Créer ces secrets dans GitHub :
+La configuration passe **uniquement par des secrets de dépôt GitHub**, jamais par un fichier
+`.env` commité, et suit la règle **un secret = une variable** :
+
+| Secret | Rôle |
+| --- | --- |
+| `AWIN_PUBLISHER_ID` | L’`awinaffid` du compte éditeur. Une seule valeur pour tout le site. |
+| `AWIN_ADVERTISER_<CLÉ>` | L’`awinmid` d’un programme rejoint. Un secret par marchand. |
+
+La `<CLÉ>` correspond à la clé du marchand dans `MERCHANT_CATALOGUE`
+(`backend/routes/shared-lists.js`), en majuscules et tirets remplacés par des underscores :
+
+Les 6 programmes rejoints au 5 août 2026, et leur clé dans `MERCHANT_CATALOGUE` :
+
+| awinmid | Programme | Secret | URL de recherche |
+| --- | --- | --- | --- |
+| 6948 | Cdiscount FR | `AWIN_ADVERTISER_CDISCOUNT` | `cdiscount.com/search/10/{query}.html` |
+| 26009 | Aliexpress FR | `AWIN_ADVERTISER_ALIEXPRESS` | `fr.aliexpress.com/wholesale?SearchText={query}` |
+| 66020 | iTeaworld | `AWIN_ADVERTISER_ITEAWORLD` | `iteaworld.com/search?q={query}` |
+| 121692 | brickzonehub | `AWIN_ADVERTISER_BRICKZONEHUB` | `brickzonehub.co.uk/search?q={query}` |
+| 122426 | Imou FR | `AWIN_ADVERTISER_IMOU` | `store.imou.com/search?q={query}` |
+| 127959 | SPORTPARTNERS.FR | `AWIN_ADVERTISER_SPORTPARTNERS` | `sportpartners.fr/catalog?q={query}` |
+
+Les URL de recherche ont été relevées sur chaque site (formulaire de recherche ou
+plateforme identifiée), pas déduites d’un modèle générique.
+
+Le nom du marchand et son URL de recherche ne sont **pas** des secrets : ce sont des données
+publiques, versionnées dans `MERCHANT_CATALOGUE`. Ajouter un marchand demande donc deux
+gestes :
+
+1. ajouter son entrée au catalogue (`key`, `merchant`, `searchUrl` contenant `{query}`) ;
+2. créer le secret `AWIN_ADVERTISER_<CLÉ>` avec son `awinmid`, et le déclarer dans
+   `docker-compose.prod.yml`, `render.yaml` et `.github/workflows/deploy-vps.yml`.
+
+Le backend construit alors, pour chaque cadeau :
+
+```text
+https://www.awin1.com/cread.php?awinmid=1234&awinaffid=2997877&clickref=<id du cadeau>&ued=<url de recherche encodée>
+```
+
+Un secret absent ou non numérique est ignoré avec un avertissement dans les logs : le
+marchand reste affiché, mais en lien non affilié. Rien ne casse la page publique.
+
+## 5 bis. Lister ses programmes rejoints
+
+Le jeton OAuth2 de la page « Identifiants API » ne sert **pas** au fonctionnement du site :
+uniquement à interroger l’API Awin depuis un poste de développement. Il ne doit donc être ni
+commité, ni déployé, ni collé dans une conversation.
+
+```bash
+cd backend
+AWIN_PUBLISHER_ID=2997877 AWIN_API_TOKEN=<jeton> npm run awin:programmes
+```
+
+Le script lit ces deux valeurs dans l’environnement le temps de l’appel, n’écrit rien sur
+disque et n’affiche jamais le jeton. Il sort la liste des programmes au statut `joined`, les
+secrets à créer, et le code à ajouter au catalogue pour les marchands encore inconnus.
+
+Les secrets suivants ne servent qu’aux phases ultérieures (flux produits et Link Builder) :
 
 ```dotenv
-AWIN_PUBLISHER_ID=123456
-AWIN_API_TOKEN=...
 AWIN_DATAFEED_API_KEY=...
 ```
 
