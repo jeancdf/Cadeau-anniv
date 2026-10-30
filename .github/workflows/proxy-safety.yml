@@ -1,0 +1,29 @@
+name: Shared proxy safety
+on:
+  pull_request:
+  push:
+permissions:
+  contents: read
+jobs:
+  proxy-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s tests -p test_proxy_isolation.py
+      - name: Check deployment shell syntax
+        run: git ls-files '*.sh' | xargs -r -n1 bash -n
+      - name: Validate application Compose without deployment
+        env:
+          POSTGRES_DB: validation
+          POSTGRES_USER: validation
+          POSTGRES_PASSWORD: validation-only
+          SECRET_KEY: validation-only
+          ADMIN_PASSWORD: validation-only
+          QWEN_API_KEY: validation-only
+          DB_USER: validation
+          DB_PASSWORD: validation-only
+          DB_NAME: validation
+        run: docker compose -f docker-compose.prod.yml config --no-env-resolution --quiet

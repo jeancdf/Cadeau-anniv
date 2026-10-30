@@ -40,6 +40,9 @@ if [[ ! -d "$RELEASE_DIR" ]]; then
   STAGING_DIR=""
 fi
 
+PUBLIC_DOMAIN="${PUBLIC_DOMAIN:-gift-finder.duckdns.org}" \
+  bash "$RELEASE_DIR/deploy/configure-caddy.sh"
+
 install -m 600 "$EXPECTED_ENV" "$APP_ROOT/.env"
 
 docker network inspect qr-code_app_net >/dev/null
@@ -49,9 +52,6 @@ docker compose \
   --env-file "$APP_ROOT/.env" \
   -f "$RELEASE_DIR/docker-compose.prod.yml" \
   up -d --build --remove-orphans --wait --wait-timeout 240
-
-PUBLIC_DOMAIN="${PUBLIC_DOMAIN:-gift-finder.duckdns.org}" \
-  bash "$RELEASE_DIR/deploy/configure-caddy.sh"
 
 healthy=false
 for attempt in $(seq 1 24); do

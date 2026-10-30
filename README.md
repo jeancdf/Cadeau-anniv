@@ -87,11 +87,13 @@ Chaque push sur `main` déclenche `.github/workflows/deploy-vps.yml`. La pipelin
 - construit et démarre Angular, l'API et PostgreSQL avec Docker Compose ;
 - conserve PostgreSQL dans le volume nommé `gift-finder_postgres_data` ;
 - connecte uniquement le frontend au réseau Caddy `qr-code_app_net` ;
-- ajoute de façon idempotente la route HTTPS `gift-finder.duckdns.org` au Caddy
-  existant, après sauvegarde et validation de sa configuration ;
+- vérifie avant le démarrage que le proxy dédié possède la route active
+  `gift-finder.duckdns.org` → `gift-finder-frontend:80` et le réseau requis ;
 - vérifie ensuite `https://gift-finder.duckdns.org/api/health`.
 
 Le backend, PostgreSQL et leurs ports ne sont jamais publiés sur l'hôte.
+
+`deploy/configure-caddy.sh` est désormais une vérification en lecture seule. Toute modification du proxy passe par [caddy-config](https://github.com/jeancdf/caddy-config). Le déploiement reste bloqué tant que sa migration n’est pas effective ; voir [l’ordre de migration](docs/CADDY-MIGRATION.md).
 
 ### Secrets GitHub requis
 
