@@ -22,9 +22,9 @@ class ProxyCheckTests(unittest.TestCase):
         spec.loader.exec_module(module)
         return module
 
-    def check(self, *, project="vps-caddy", running=True, network=True, routes=None, malformed=False):
+    def check(self, *, project="vps-caddy", service="proxy", running=True, network=True, routes=None, malformed=False):
         module = self.checker()
-        metadata = [{"Config": {"Labels": {"com.docker.compose.project": project, "com.docker.compose.service": "caddy"}}, "State": {"Running": running}, "NetworkSettings": {"Networks": {"edge": {}} if network else {}}}]
+        metadata = [{"Config": {"Labels": {"com.docker.compose.project": project, "com.docker.compose.service": service}}, "State": {"Running": running}, "NetworkSettings": {"Networks": {"edge": {}} if network else {}}}]
         config = {"apps": {"http": {"servers": {"srv0": {"routes": [route()] if routes is None else routes}}}}}
         calls = []
         def docker(args, **kwargs):
@@ -38,12 +38,18 @@ class ProxyCheckTests(unittest.TestCase):
             module.check_proxy([("example.test", "web:80")], ["edge"])
         return calls
 
-    def test_accepts_running_dedicated_owner_with_active_matching_route(self):
-        self.assertEqual(len(self.check()), 2)
+    def test_accepts_actual_dedicated_runtime_project_and_proxy_service(self):
+        # caddy-config/compose.yaml: name=vps-caddy, services.proxy,
+        # container_name=qr_caddy. This is independent of the checker constant.
+        self.assertEqual(len(self.check(project="vps-caddy", service="proxy")), 2)
+
+    def test_rejects_legacy_service_even_with_dedicated_project(self):
+        with self.assertRaisesRegex(RuntimeError, "vps-caddy"):
+            self.check(project="vps-caddy", service="caddy")
 
     def test_rejects_legacy_owner_before_fetching_config(self):
         with self.assertRaisesRegex(RuntimeError, "vps-caddy"):
-            self.check(project="qr-code")
+            self.check(project="qr-code", service="caddy")
 
     def test_rejects_stopped_proxy(self):
         with self.assertRaises(RuntimeError):

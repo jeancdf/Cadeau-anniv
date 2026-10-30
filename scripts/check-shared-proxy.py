@@ -35,8 +35,8 @@ def check_proxy(sites, networks):
         raise RuntimeError("Proxy metadata is unavailable; deployment refused.")
     container = metadata[0]
     labels = container.get("Config", {}).get("Labels") or {}
-    if labels.get("com.docker.compose.project") != "vps-caddy" or labels.get("com.docker.compose.service") != "caddy":
-        raise RuntimeError("Proxy must be owned by vps-caddy; approve and complete the caddy-config migration first.")
+    if labels.get("com.docker.compose.project") != "vps-caddy" or labels.get("com.docker.compose.service") != "proxy":
+        raise RuntimeError("Proxy must be owned by vps-caddy service proxy; approve and complete the caddy-config migration first.")
     if container.get("State", {}).get("Running") is not True:
         raise RuntimeError("Dedicated proxy is not running; deployment refused.")
     attached = container.get("NetworkSettings", {}).get("Networks") or {}
