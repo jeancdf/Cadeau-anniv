@@ -93,7 +93,7 @@ Chaque push sur `main` déclenche `.github/workflows/deploy-vps.yml`. La pipelin
 
 Le backend, PostgreSQL et leurs ports ne sont jamais publiés sur l'hôte.
 
-`deploy/configure-caddy.sh` est désormais une vérification en lecture seule. Toute modification du proxy passe par [caddy-config](https://github.com/jeancdf/caddy-config). Le déploiement reste bloqué tant que sa migration n’est pas effective ; voir [l’ordre de migration](docs/CADDY-MIGRATION.md).
+`deploy/configure-caddy.sh` est une vérification en lecture seule et non bloquante, valable avant et après la migration. Toute modification du proxy passe par [caddy-config](https://github.com/jeancdf/caddy-config) ; voir [l’ordre de migration](docs/CADDY-MIGRATION.md).
 
 ### Secrets GitHub requis
 

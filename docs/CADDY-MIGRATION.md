@@ -2,7 +2,7 @@
 
 Le proxy HTTPS est géré exclusivement dans le dépôt privé [jeancdf/caddy-config](https://github.com/jeancdf/caddy-config), projet Compose `vps-caddy`, conteneur `qr_caddy`. Ce dépôt applicatif ne modifie plus sa configuration, ses réseaux, ses volumes ou son cycle de vie, y compris en cas d’échec ou de repli applicatif.
 
-Les déploiements vérifient avant le build/démarrage applicatif le propriétaire Compose du proxy, son état actif, les réseaux requis et la correspondance hôte → destination dans sa configuration JSON active. L’API d’administration est lue dans le conteneur ; son port n’est jamais publié. Python 3 doit être présent sur le VPS. Un proxy encore étiqueté `qr-code`, une route absente ou un réseau absent bloque le déploiement. Le contrôle ne répare jamais le proxy.
+Les déploiements exécutent, avant le build, un contrôle **en lecture seule et non bloquant** : il accepte le proxy `qr_caddy` encore dans le projet `qr-code` (avant migration) ou dans `vps-caddy`/`proxy` (après), vérifie état, réseaux et routes, et n’émet qu’un avertissement en cas d’écart. Le bloquant reste le contrôle de santé public. Aucune écriture, aucun rechargement, aucune recréation du proxy.
 
 ## Ordre de migration à approuver
 
@@ -11,7 +11,7 @@ Les déploiements vérifient avant le build/démarrage applicatif le propriétai
 3. Après approbation explicite du propriétaire, exécuter uniquement la migration initiale du dépôt dédié. Préserver les volumes de certificats existants, toutes les routes et les réseaux externes.
 4. Vérifier les seize domaines et les destinations. Les déploiements applicatifs pourront ensuite reprendre avec leur contrôle en lecture seule. Les rechargements et replis du proxy restent dans `caddy-config`.
 
-Cette PR prépare les fichiers et les contrôles : elle ne fusionne rien sur `main`, ne lance aucun workflow de production et ne modifie pas le VPS. Avant la migration, l’échec du contrôle de propriétaire est intentionnel.
+Cette PR prépare les fichiers et les contrôles : elle ne fusionne rien sur `main`, ne lance aucun workflow de production et ne modifie pas le VPS. Le déploiement fonctionne avant et après la migration.
 
 ## Vérification locale
 

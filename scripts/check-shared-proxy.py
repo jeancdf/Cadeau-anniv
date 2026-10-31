@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Read-only deployment preflight for the proxy owned by jeancdf/caddy-config.
+"""Read-only deployment preflight for the shared proxy (qr_caddy).
+
+Accepts both the pre-migration owner (project qr-code) and the dedicated owner
+(jeancdf/caddy-config: project vps-caddy, service proxy). Never writes.
 
 This intentionally reads active Caddy JSON, rather than accepting an obsolete
 file on disk. The admin endpoint is reached inside the existing container only.
@@ -35,8 +38,15 @@ def check_proxy(sites, networks):
         raise RuntimeError("Proxy metadata is unavailable; deployment refused.")
     container = metadata[0]
     labels = container.get("Config", {}).get("Labels") or {}
-    if labels.get("com.docker.compose.project") != "vps-caddy" or labels.get("com.docker.compose.service") != "proxy":
-        raise RuntimeError("Proxy must be owned by vps-caddy service proxy; approve and complete the caddy-config migration first.")
+    owner = (labels.get("com.docker.compose.project"), labels.get("com.docker.compose.service"))
+    if owner == ("vps-caddy", "proxy"):
+        state = "dedicated"
+    elif owner[0] == "qr-code":
+        # Before the caddy-config migration the proxy is still owned by qr-code.
+        # This is an accepted, read-only state: never fail because of it.
+        state = "legacy"
+    else:
+        raise RuntimeError("Proxy owner is neither vps-caddy/proxy nor the pre-migration qr-code project.")
     if container.get("State", {}).get("Running") is not True:
         raise RuntimeError("Dedicated proxy is not running; deployment refused.")
     attached = container.get("NetworkSettings", {}).get("Networks") or {}
@@ -58,6 +68,7 @@ def check_proxy(sites, networks):
                 break
         if not matched:
             raise RuntimeError(f"Active proxy route {host} -> {upstream} is missing; change jeancdf/caddy-config first.")
+    return state
 
 
 def main():
@@ -66,11 +77,11 @@ def main():
     parser.add_argument("--network", action="append", default=[])
     args = parser.parse_args()
     try:
-        check_proxy(args.site, args.network)
+        state = check_proxy(args.site, args.network)
     except (RuntimeError, TypeError, AttributeError) as error:
         print(f"Shared proxy preflight failed: {error}", file=sys.stderr)
         return 1
-    print("Dedicated proxy ownership, active routes and networks verified (read only).")
+    print(f"Proxy ({state} owner), active routes and networks verified (read only).")
     return 0
 
 

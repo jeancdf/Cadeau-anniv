@@ -43,13 +43,16 @@ class ProxyCheckTests(unittest.TestCase):
         # container_name=qr_caddy. This is independent of the checker constant.
         self.assertEqual(len(self.check(project="vps-caddy", service="proxy")), 2)
 
-    def test_rejects_legacy_service_even_with_dedicated_project(self):
-        with self.assertRaisesRegex(RuntimeError, "vps-caddy"):
-            self.check(project="vps-caddy", service="caddy")
+    def test_accepts_pre_migration_legacy_owner_read_only(self):
+        self.assertEqual(len(self.check(project="qr-code", service="caddy")), 2)
 
-    def test_rejects_legacy_owner_before_fetching_config(self):
-        with self.assertRaisesRegex(RuntimeError, "vps-caddy"):
-            self.check(project="qr-code", service="caddy")
+    def test_rejects_unknown_owner(self):
+        with self.assertRaisesRegex(RuntimeError, "owner"):
+            self.check(project="other", service="caddy")
+
+    def test_rejects_dedicated_project_with_wrong_service(self):
+        with self.assertRaisesRegex(RuntimeError, "owner"):
+            self.check(project="vps-caddy", service="caddy")
 
     def test_rejects_stopped_proxy(self):
         with self.assertRaises(RuntimeError):
@@ -99,6 +102,11 @@ class OwnershipBoundaryTests(unittest.TestCase):
                     self.assertNotIn("/data/lsc-preprod", text)
                     self.assertNotRegex(text, r"(?m)^.*(?:up|restart|reload).*caddy\s*$")
                     self.assertNotRegex(text, r"docker network (?:connect|disconnect).*qr_caddy")
+
+    def test_configure_script_is_advisory_and_never_fails_deploy(self):
+        text = (ROOT / "deploy/configure-caddy.sh").read_text(encoding="utf-8")
+        self.assertIn("||", text)
+        self.assertTrue(text.rstrip().endswith("exit 0"))
 
     def test_production_compose_is_application_only(self):
         text = (ROOT / "docker-compose.prod.yml").read_text()
